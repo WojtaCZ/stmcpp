@@ -154,33 +154,36 @@ namespace gpio{
             }
 
             void enableInterrupt(gpio::interrupt::edge edge) const {
+                
+                constexpr auto extiIndex_ = static_cast<unsigned int>(Pin / 4);
+                constexpr auto extiShift_ = (Pin % 4) * 4;
+                constexpr auto extiPort_ = (static_cast<uint32_t>(Port) - GPIOA_BASE) / 0x0400UL;
 
-                constexpr auto extiShift_ = (static_cast<uint32_t>(Port) - GPIOA_BASE) / 0x0400UL;
-                reg::set(std::ref(SYSCFG->EXTICR[1]), 0x01, extiShift_);
+                reg::change(std::ref(SYSCFG->EXTICR[extiIndex_]), 0x0F, extiPort_, extiShift_);
 
                 setInterruptEdge(edge);
 
                 reg::set(std::ref(EXTI->IMR1), 0x01, Pin);
             }
 
-            void disableInterrupt(){
+            void disableInterrupt() const {
                 reg::clear(std::ref(EXTI->IMR1), 0x01, Pin);
                 reg::clear(std::ref(EXTI->RTSR1), 0x01, Pin);
                 reg::clear(std::ref(EXTI->FTSR1), 0x01, Pin);
             }
 
-            void clearInterruptFlag(){
+            void clearInterruptFlag() const {
                 reg::set(std::ref(EXTI->PR1), 0x01, Pin);
             }
 
-            void setInterruptEdge(gpio::interrupt::edge edge){
+            void setInterruptEdge(gpio::interrupt::edge edge) const {
                 if(edge == gpio::interrupt::edge::rising){
-                    reg::change(std::ref(EXTI->RTSR1), 0x01, Pin);
+                    reg::change(std::ref(EXTI->RTSR1), 0x01, 0x01, Pin);
                 }else if(edge == gpio::interrupt::edge::falling){
-                    reg::change(std::ref(EXTI->FTSR1), 0x01, Pin);
+                    reg::change(std::ref(EXTI->FTSR1), 0x01, 0x01, Pin);
                 }else if(edge == gpio::interrupt::edge::both){
-                    reg::change(std::ref(EXTI->RTSR1), 0x01, Pin);
-                    reg::change(std::ref(EXTI->FTSR1), 0x01, Pin);
+                    reg::change(std::ref(EXTI->RTSR1), 0x01, 0x01, Pin);
+                    reg::change(std::ref(EXTI->FTSR1), 0x01, 0x01, Pin);
                 }
             }
     };    

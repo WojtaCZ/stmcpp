@@ -21,7 +21,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <functional>
-
+#include <type_traits>
 
 /*
  * The following file contains the helper function templates
@@ -35,7 +35,7 @@ namespace reg{
 
     template <typename A = regbase, typename V>
     constexpr void write(std::reference_wrapper<A> address, V value, unsigned int bitshift = 0){
-        address.get() &= ~(value << bitshift); 
+        address.get() = (value << bitshift); 
     }
 
     template <typename A = regbase>
