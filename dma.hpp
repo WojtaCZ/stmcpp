@@ -89,13 +89,17 @@ namespace dma{
         full = 0b11
     };
 
-    template<peripheral Peripheral, stream Stream, mode mode_, datasize psize_, bool pincrement_, datasize msize_, bool mincrement_, uint16_t numofdata_,
-             priority priority_ = priority::low, bool circular_ = false, pincoffset pincoffset_ = pincoffset::psize, bool doublebuffer_ = false, bool bufferedtransfers_ = false, flowcontroller flowcontroller_ = flowcontroller::dma, burstsize pburst_ = burstsize::single, burstsize mburst_ = burstsize::single>
+    template<peripheral Peripheral, stream Stream>
     class dma{
         private:
             DMA_Stream_TypeDef * const streamHandle_ = reinterpret_cast<DMA_Stream_TypeDef *>(static_cast<std::uint32_t>(Peripheral) + static_cast<std::uint32_t>(Stream));
+            DMA_TypeDef * const dmaHandle_ = reinterpret_cast<DMA_TypeDef *>(static_cast<std::uint32_t>(Peripheral));
         public:
-            dma(uint32_t paddress_, uint32_t m0address_, uint32_t m1address_ = 0){
+            dma(dma::mode mode, dma::datasize psize, bool pincrement, uint32_t paddress, dma::datasize msize, bool mincrement, uint32_t m0address, uint32_t m1address, uint16_t numofdata,
+                dma::priority priority = priority::low, bool circular = false, dma::pincoffset pincoffset = dma::pincoffset::psize,
+                bool doublebuffer = false, bool bufferedtransfers = false, dma::flowcontroller flowcontroller = dma::flowcontroller::dma,
+                dma::burstsize pburst = dma::burstsize::single, dma::burstsize mburst = dma::burstsize::single
+                ){
                 reg::write(std::ref(streamHandle_->CR),
                     //Interrupts are not enabled here and the channel is not yet being enabled
                     ((static_cast<std::uint8_t>(flowcontroller_) & 0b1) << DMA_SxCR_PFCTRL_Pos) |
@@ -142,7 +146,7 @@ namespace dma{
                 for(auto i : int_){
                     if(i == interrupt::fifoError){
                         //If the fifo interrupt should be enabled, set it right away
-                        reg::set(std::ref(streamHandle_->CR), DMA_SxFCR_FEIE);
+                        reg::set(std::ref(streamHandle_->FCR), DMA_SxFCR_FEIE);
                     }else{
                         switch(int_){
                         case interrupt::transferHalfComplete:
@@ -171,21 +175,21 @@ namespace dma{
             void enableInterrupt(interrupt int_){
                 if(int_ == interrupt::fifoError){
                     //If the fifo interrupt should be enabled, set it
-                    reg::set<static_cast<uint32_t>(peripheral_) + static_cast<uint32_t>(stream_) + offsetof(DMA_Stream_TypeDef, FCR)>(int_);
+                    reg::set(std::ref(streamHandle_->FCR), DMA_SxFCR_FEIE);
                 }else{
                     //If the interrupt in the CR should be set, set it
                      switch(int_){
                         case interrupt::transferHalfComplete:
-                            reg::set<static_cast<uint32_t>(peripheral_) + static_cast<uint32_t>(stream_) + offsetof(DMA_Stream_TypeDef, CR)>(0b1 << DMA_SxCR_HTIE_Pos);
+                            reg::set(std::ref(streamHandle_->CR), DMA_SxCR_HTIE);
                             break;
                         case interrupt::transferComplete:
-                            reg::set<static_cast<uint32_t>(peripheral_) + static_cast<uint32_t>(stream_) + offsetof(DMA_Stream_TypeDef, CR)>(0b1 << DMA_SxCR_TCIE_Pos);
+                            reg::set(std::ref(streamHandle_->CR), DMA_SxCR_TCIE);
                             break;
                         case interrupt::transferError:
-                            reg::set<static_cast<uint32_t>(peripheral_) + static_cast<uint32_t>(stream_) + offsetof(DMA_Stream_TypeDef, CR)>(0b1 << DMA_SxCR_TEIE_Pos);
+                            reg::set(std::ref(streamHandle_->CR), DMA_SxCR_TEIE);
                             break;
                         case interrupt::directModeError:
-                            reg::set<static_cast<uint32_t>(peripheral_) + static_cast<uint32_t>(stream_) + offsetof(DMA_Stream_TypeDef, CR)>(0b1 << DMA_SxCR_DMEIE_Pos);
+                            reg::set(std::ref(streamHandle_->CR), DMA_SxCR_DMEIE);
                             break;
                         
                         default:
@@ -194,26 +198,26 @@ namespace dma{
                 }
             }
 
-            void disableInterrupt(std::vector<interrupt> int_){
+            void disableInterrupt(const std::vector<interrupt> int_){
                 uint8_t mask_ = 0;
 
                 for(auto i : int_){
                     if(i == interrupt::fifoError){
                         //If the fifo interrupt should be enabled, set it right away
-                        reg::clear<static_cast<uint32_t>(peripheral_) + static_cast<uint32_t>(stream_) + offsetof(DMA_Stream_TypeDef, FCR)>(0b1 << DMA_SxFCR_FEIE_Pos);
+                        reg::clear(std::ref(streamHandle_->FCR), DMA_SxFCR_FEIE);
                     }else{
                         switch(int_){
                         case interrupt::transferHalfComplete:
-                            mask_ |= (0b1 << DMA_SxCR_HTIE_Pos);
+                            mask_ |= DMA_SxCR_HTIE;
                             break;
                         case interrupt::transferComplete:
-                            mask_ |= (0b1 << DMA_SxCR_TCIE_Pos);
+                            mask_ |= DMA_SxCR_TCIE;
                             break;
                         case interrupt::transferError:
-                            mask_ |= (0b1 << DMA_SxCR_TEIE_Pos);
+                            mask_ |= DMA_SxCR_TEIE;
                             break;
                         case interrupt::directModeError:
-                            mask_ |= (0b1 << DMA_SxCR_DMEIE_Pos);
+                            mask_ |= DMA_SxCR_DMEIE;
                             break;
                         
                         default:
@@ -223,27 +227,27 @@ namespace dma{
                 }
 
                 //Apply the mask to the control register
-                reg::clear<static_cast<uint32_t>(peripheral_) + static_cast<uint32_t>(stream_) + offsetof(DMA_Stream_TypeDef, CR)>(mask_);
+                reg::clear(std::ref(streamHandle_->CR), mask_);
             }
 
             void disableInterrupt(interrupt int_){
                 if(int_ == interrupt::fifoError){
                     //If the fifo interrupt should be enabled, set it
-                    reg::set<static_cast<uint32_t>(peripheral_) + static_cast<uint32_t>(stream_) + offsetof(DMA_Stream_TypeDef, FCR)>(static_cast<uint32_t>(int_));
+                    reg::clear(std::ref(streamHandle_->FCR), DMA_SxFCR_FEIE);
                 }else{
                     //If the interrupt in the CR should be set, set it
                      switch(int_){
                         case interrupt::transferHalfComplete:
-                            reg::clear<static_cast<uint32_t>(peripheral_) + static_cast<uint32_t>(stream_) + offsetof(DMA_Stream_TypeDef, CR)>(0b1 << DMA_SxCR_HTIE_Pos);
+                            reg::clear(std::ref(streamHandle_->CR), DMA_SxCR_HTIE);
                             break;
                         case interrupt::transferComplete:
-                            reg::clear<static_cast<uint32_t>(peripheral_) + static_cast<uint32_t>(stream_) + offsetof(DMA_Stream_TypeDef, CR)>(0b1 << DMA_SxCR_TCIE_Pos);
+                            reg::clear(std::ref(streamHandle_->CR), DMA_SxCR_TCIE);
                             break;
                         case interrupt::transferError:
-                            reg::clear<static_cast<uint32_t>(peripheral_) + static_cast<uint32_t>(stream_) + offsetof(DMA_Stream_TypeDef, CR)>(0b1 << DMA_SxCR_TEIE_Pos);
+                            reg::clear(std::ref(streamHandle_->CR), DMA_SxCR_TEIE);
                             break;
                         case interrupt::directModeError:
-                            reg::clear<static_cast<uint32_t>(peripheral_) + static_cast<uint32_t>(stream_) + offsetof(DMA_Stream_TypeDef, CR)>(0b1 << DMA_SxCR_DMEIE_Pos);
+                            reg::clear(std::ref(streamHandle_->CR), DMA_SxCR_DMEIE);
                             break;
                         
                         default:
@@ -256,28 +260,28 @@ namespace dma{
             void clearInterruptFlag(interrupt int_){
                 switch (stream_){
                     case stream::stream0:
-                        reg::write<static_cast<uint32_t>(peripheral_) + offsetof(DMA_TypeDef, LIFCR)>(static_cast<uint32_t>(int_));
+                        reg::set(std::ref(dmaHandle_->LIFCR), static_cast<uint32_t>(int_), 0);
                         break;
                     case stream::stream1:
-                        reg::write<static_cast<uint32_t>(peripheral_) + offsetof(DMA_TypeDef, LIFCR)>(static_cast<uint32_t>(int_) << 5);
+                        reg::set(std::ref(dmaHandle_->LIFCR), static_cast<uint32_t>(int_), 5);
                         break;
                     case stream::stream2:
-                        reg::write<static_cast<uint32_t>(peripheral_) + offsetof(DMA_TypeDef, LIFCR)>(static_cast<uint32_t>(int_) << 10);
+                        reg::set(std::ref(dmaHandle_->LIFCR), static_cast<uint32_t>(int_), 10);
                         break;
                     case stream::stream3:
-                        reg::write<static_cast<uint32_t>(peripheral_) + offsetof(DMA_TypeDef, LIFCR)>(static_cast<uint32_t>(int_) << 15);
+                        reg::set(std::ref(dmaHandle_->LIFCR), static_cast<uint32_t>(int_), 15);
                         break;
                     case stream::stream4:
-                        reg::write<static_cast<uint32_t>(peripheral_) + offsetof(DMA_TypeDef, HIFCR)>(static_cast<uint32_t>(int_));
+                        reg::set(std::ref(dmaHandle_->HIFCR), static_cast<uint32_t>(int_), 0);
                         break;
                     case stream::stream5:
-                        reg::write<static_cast<uint32_t>(peripheral_) + offsetof(DMA_TypeDef, HIFCR)>(static_cast<uint32_t>(int_) << 5);
+                        reg::set(std::ref(dmaHandle_->HIFCR), static_cast<uint32_t>(int_), 5);
                         break;
                     case stream::stream6:
-                        reg::write<static_cast<uint32_t>(peripheral_) + offsetof(DMA_TypeDef, HIFCR)>(static_cast<uint32_t>(int_) << 10);
+                        reg::set(std::ref(dmaHandle_->HIFCR), static_cast<uint32_t>(int_), 10);
                         break;
                     case stream::stream7:
-                        reg::write<static_cast<uint32_t>(peripheral_) + offsetof(DMA_TypeDef, HIFCR)>(static_cast<uint32_t>(int_) << 15);
+                        reg::set(std::ref(dmaHandle_->HIFCR), static_cast<uint32_t>(int_), 15);
                         break;
                     
                     default:
@@ -288,28 +292,28 @@ namespace dma{
             bool getInterruptFlag(interrupt int_){
                 switch (stream_){
                     case stream::stream0:
-                        return static_cast<bool>(reg::read<static_cast<uint32_t>(peripheral_) + offsetof(DMA_TypeDef, LISR)>(static_cast<uint32_t>(int_)));
+                        return static_cast<bool>(reg::read(std::ref(dmaHandle_->LISR), static_cast<uint32_t>(int_), 0));
                         break;
                     case stream::stream1:
-                        return static_cast<bool>(reg::read<static_cast<uint32_t>(peripheral_) + offsetof(DMA_TypeDef, LISR)>(static_cast<uint32_t>(int_) << 5));
+                        return static_cast<bool>(reg::read(std::ref(dmaHandle_->LISR), static_cast<uint32_t>(int_), 5));
                         break;
                     case stream::stream2:
-                        return static_cast<bool>(reg::read<static_cast<uint32_t>(peripheral_) + offsetof(DMA_TypeDef, LISR)>(static_cast<uint32_t>(int_) << 10));
+                        return static_cast<bool>(reg::read(std::ref(dmaHandle_->LISR), static_cast<uint32_t>(int_), 10));
                         break;
                     case stream::stream3:
-                        return static_cast<bool>(reg::read<static_cast<uint32_t>(peripheral_) + offsetof(DMA_TypeDef, LISR)>(static_cast<uint32_t>(int_) << 15));
+                        return static_cast<bool>(reg::read(std::ref(dmaHandle_->LISR), static_cast<uint32_t>(int_), 15));
                         break;
                     case stream::stream4:
-                        return static_cast<bool>(reg::read<static_cast<uint32_t>(peripheral_) + offsetof(DMA_TypeDef, HISR)>(static_cast<uint32_t>(int_)));
+                        return static_cast<bool>(reg::read(std::ref(dmaHandle_->HISR), static_cast<uint32_t>(int_), 0));
                         break;
                     case stream::stream5:
-                        return static_cast<bool>(reg::read<static_cast<uint32_t>(peripheral_) + offsetof(DMA_TypeDef, HISR)>(static_cast<uint32_t>(int_) << 5));
+                        return static_cast<bool>(reg::read(std::ref(dmaHandle_->HISR), static_cast<uint32_t>(int_), 5));
                         break;
                     case stream::stream6:
-                        return static_cast<bool>(reg::read<static_cast<uint32_t>(peripheral_) + offsetof(DMA_TypeDef, HISR)>(static_cast<uint32_t>(int_) << 10));
+                        return static_cast<bool>(reg::read(std::ref(dmaHandle_->HISR), static_cast<uint32_t>(int_), 10));
                         break;
                     case stream::stream7:
-                        return static_cast<bool>(reg::read<static_cast<uint32_t>(peripheral_) + offsetof(DMA_TypeDef, HISR)>(static_cast<uint32_t>(int_) << 15));
+                        return static_cast<bool>(reg::read(std::ref(dmaHandle_->HISR), static_cast<uint32_t>(int_), 15));
                         break;
                     
                     default:
@@ -318,12 +322,11 @@ namespace dma{
             }
 
             void setFifoTreshold(fifotreshold ft_){
-                reg::clear<static_cast<uint32_t>(peripheral_) + static_cast<uint32_t>(stream_) + offsetof(DMA_Stream_TypeDef, FCR)>(0b11 << DMA_SxFCR_FTH_Pos);
-                reg::set<static_cast<uint32_t>(peripheral_) + static_cast<uint32_t>(stream_) + offsetof(DMA_Stream_TypeDef, FCR)>(static_cast<std::uint8_t>(ft_) << DMA_SxFCR_FTH_Pos);
+                reg::change(streamHandle_->FCR, 0x03, static_cast<std::uint8_t>(ft_), DMA_SxFCR_FTH_Pos);
             }
 
             fifostat getFifoStatus(){
-                return static_cast<fifostat>(reg::read<static_cast<uint32_t>(peripheral_) + static_cast<uint32_t>(stream_) + offsetof(DMA_Stream_TypeDef, FCR)>(0b111 << DMA_SxFCR_FS_Pos));
+                return static_cast<fifostat>(reg::read(std::ref(streamHandle_->FCR), 0x07, DMA_SxFCR_FS_Pos));
             }
 
     };
