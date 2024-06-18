@@ -8,8 +8,7 @@
 #include "stm32h753xx.h"
 
 namespace usart{
-    using namespace std;
-    
+
     enum class peripheral : std::uint32_t {
         usart1 = USART1_BASE,
         usart2 = USART2_BASE,
@@ -68,9 +67,9 @@ namespace usart{
     };
     
     enum class wordlength : std::uint8_t{
-        eight  = 0b00,
-        nine   = 0b01,
-        seven  = 0b10
+        eightbit  = 0b00,
+        ninebit   = 0b01,
+        sevenbit  = 0b10
     };
 
     enum class interrupt : std::uint32_t{
@@ -109,13 +108,13 @@ namespace usart{
         return std::round((((oversamp ==  usart::oversampling::times16) ? 1.0 : 2.0) * static_cast<double>(periphclock)) / static_cast<double>(baudrate)); 
     }
 */
-    template<usart::peripheral Peripheral>
+    template<peripheral Peripheral>
     class usart{
         private:
             USART_TypeDef * const usartHandle_ = reinterpret_cast<USART_TypeDef *>(static_cast<std::uint32_t>(Peripheral));
         public:
-            constexpr usart(std::uint32_t rawbaud, bool fifomode, usart::wordlength wordlength){
-                usart::
+            constexpr usart(std::uint32_t rawbaud, bool fifomode, wordlength wordlength = wordlength::eightbit, ){
+
             }
     };
 
