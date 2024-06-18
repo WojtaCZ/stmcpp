@@ -7,7 +7,7 @@
 #include "stm32h753xx.h"
 
 namespace dmamux1{
-    enum class channel {
+    enum class channel : std::uint32_t {
         channel0    = 0x000UL,
         channel1    = 0x004UL,
         channel2    = 0x008UL,
@@ -26,7 +26,7 @@ namespace dmamux1{
         channel15   = 0x03CUL,
     };  
 
-    enum class request {
+    enum class request : std::uint8_t{
         dmamux1_req_gen0    = 1,
         dmamux1_req_gen1    = 2,
         dmamux1_req_gen2    = 3,
@@ -144,7 +144,7 @@ namespace dmamux1{
         adc3_dma            = 115
     };
     
-    enum class trigger {
+    enum class trigger : std::uint8_t{
         dmamux1_evt0        = 0,
         dmamux1_evt1        = 1,
         dmamux1_evt2        = 2,
@@ -155,7 +155,7 @@ namespace dmamux1{
         tim12_trgo          = 7
     };
 
-    enum class sync {
+    enum class sync : std::uint8_t{
         dmamux1_evt0        = 0,
         dmamux1_evt1        = 1,
         dmamux1_evt2        = 2,
@@ -166,14 +166,14 @@ namespace dmamux1{
         tim12_trgo          = 7
     };
 
-    enum class polarity {
+    enum class polarity : std::uint8_t{
         noevent     = 0b00,
         rising      = 0b01,
         falling     = 0b10,
         both        = 0b11
     };
 
-    enum class generator {
+    enum class generator : std::uint32_t{
        gen0 = 0x100UL,
        gen1 = 0x104UL,
        gen2 = 0x108UL,
@@ -184,13 +184,13 @@ namespace dmamux1{
        gen7 = 0x11CUL,
     };
 
-    template<channel channel_, request request_, uint8_t numreq_ = 1, bool syncenable_ = false, sync sync_ = sync::dmamux1_evt0, polarity polarity_ = polarity::noevent, bool eventenable_ = false, bool interruptenable_ = false>
+    template<channel Channel>
     class dmamux{
         public:
-            dmamux(){
+            dmamux(dmamux::request request, uint8_t numreq = 1, bool syncenable = false, dmamux::sync sync = dmamux::sync::dmamux1_evt0, dmamux::polarity polarity = dmamux::polarity::noevent, bool eventenable = false, bool interruptenable = false){
 
-                static_assert(numreq_ < 32, "The number of requests cannot be greater than 31!");
-                static_assert(numreq_ > 0, "The number of requests ha to be greater than zero!");
+                assert(numreq_ < 32, "The number of requests cannot be greater than 31!");
+                assert(numreq_ > 0, "The number of requests ha to be greater than zero!");
                 
                 //Write the channel configuration
                 reg::write<static_cast<uint32_t>(DMAMUX1_BASE) + static_cast<uint32_t>(channel_) + offsetof(DMAMUX_Channel_TypeDef, CCR)>( 
