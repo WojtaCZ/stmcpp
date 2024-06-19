@@ -147,6 +147,8 @@ namespace clock{
             hse,
         };
 
+        void setSource(pll::clksource source);
+
         template<peripheral Peripheral, unsigned int M, unsigned int N, unsigned int P, unsigned int Q, unsigned int R, unsigned int Fraction = 0>
         class pll{
             private:
@@ -161,26 +163,31 @@ namespace clock{
                     static_assert(Q >= clock::pll::range_div_q.first && Q <= clock::pll::range_div_q.second, "The Q divider is out of range.");
                     static_assert(R >= clock::pll::range_div_r.first && R <= clock::pll::range_div_r.second, "The R divider is out of range.");
 
+                    static_assert(!((Peripheral == peripheral::pll1) && (P % 2)), "The P divider for PLL1 must be an even number!");
+
                     volatile uint32_t * const pllCfgrAdd_ = reinterpret_cast<volatile uint32_t *>(RCC_BASE + static_cast<std::uint32_t>(Peripheral));
-
-                    reg::write(std::ref(*pllCfgrAdd_), 
-                        N << RCC_PLL1DIVR_N1_Pos |
-                        P << RCC_PLL1DIVR_P1_Pos |
-                        Q << RCC_PLL1DIVR_Q1_Pos |
-                        R << RCC_PLL1DIVR_R1_Pos 
-                    );
-
                     volatile uint32_t * const  pllFracAdd_ = reinterpret_cast<volatile uint32_t *>(RCC_BASE + static_cast<std::uint32_t>(Peripheral) + 0x004);
 
-                    reg::write(std::ref(*pllFracAdd_), Fraction, 3);
 
                     reg::change(std::ref(RCC->PLLCKSELR), 0x3F, M, (8 * getPllIdx_()) + 4);
 
+                    if constexpr (Fraction > 0){
+                        reg::write(std::ref(*pllFracAdd_), Fraction, 3);
+                        reg::set(std::ref(RCC->PLLCFGR), RCC_PLLCFGR_PLL1FRACEN, 4 * getPllIdx_());
+                    }
+
                     reg::change(std::ref(RCC->PLLCFGR), 0x0E,
-                        (
-                            static_cast<uint8_t>(inputrange) << RCC_PLLCFGR_PLL1RGE_Pos |
-                            static_cast<uint8_t>(vcorange) << RCC_PLLCFGR_PLL1VCOSEL_Pos 
-                        ), 4 * getPllIdx_());
+                    (
+                        static_cast<uint8_t>(inputrange) << RCC_PLLCFGR_PLL1RGE_Pos |
+                        static_cast<uint8_t>(vcorange) << RCC_PLLCFGR_PLL1VCOSEL_Pos 
+                    ), 4 * getPllIdx_());
+
+                    reg::write(std::ref(*pllCfgrAdd_), 
+                        (N - 1) << RCC_PLL1DIVR_N1_Pos |
+                        (P - 1) << RCC_PLL1DIVR_P1_Pos |
+                        (Q - 1) << RCC_PLL1DIVR_Q1_Pos |
+                        (R - 1) << RCC_PLL1DIVR_R1_Pos 
+                    );
                 };
 
                 void enable() const{
@@ -196,6 +203,7 @@ namespace clock{
                 }
                 
         };    
+       
     }    
 }
 
