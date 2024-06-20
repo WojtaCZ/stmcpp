@@ -7,11 +7,11 @@
 #include "stm32h753xx.h"
 
 namespace bdma{
-    enum class peripheral : uint32_t {
+    enum class peripheral : std::uint32_t {
         dma1 = BDMA_BASE
     };
 
-    enum class channel {
+    enum class channel : std::uint32_t {
         channel0 = 0x008UL,
         channel1 = 0x01CUL,
         channel2 = 0x030UL,
@@ -22,36 +22,36 @@ namespace bdma{
         channel7 = 0x094UL,
     };
 
-    enum class priority{
+    enum class priority : std::uint8_t {
         low = 0b00,
         medium = 0b01,
         high = 0b10,
         veryhigh = 0b11
     };
 
-    enum class mode{
+    enum class mode : std::uint8_t {
         periph2mem = 0b00,
         mem2periph = 0b01,
         mem2mem = 0b10,
     };
 
-    enum class datasize{
+    enum class datasize : std::uint8_t {
         byte = 0b00,
         halfword = 0b01,
         word = 0b10
     };
 
-    enum class pincoffset{
+    enum class pincoffset : std::uint8_t {
         psize = 0b0,
         word = 0b1,
     };
 
-    enum class targetmem{
+    enum class targetmem : std::uint8_t {
         mem0 = 0b0,
         mem1 = 0b1,
     };
 
-    enum class interrupt : uint8_t{
+    enum class interrupt : std::uint8_t{
         global                  = 0x01, 
         transferComplete        = 0x02,
         transferHalfComplete    = 0x04,
@@ -65,8 +65,8 @@ namespace bdma{
             BDMA_Channel_TypeDef * const channelHandle_ = reinterpret_cast<DMA_Stream_TypeDef *>(static_cast<std::uint32_t>(Peripheral) + static_cast<std::uint32_t>(Channel));
             BDMA_TypeDef * const bdmaHandle_ = reinterpret_cast<DMA_TypeDef *>(static_cast<std::uint32_t>(Peripheral));
         public:
-            bdma(bdma::mode mode, bdma::datasize psize, bool pincrement, std::uint32_t paddress, bdma::datasize msize, bool mincrement, std::uint32_t m0address, std::uint32_t m1address, std::uint16_t numofdata,
-                 bdma::priority priority = priority::low, bool circular = false, bdma::pincoffset pincoffset = bdma::pincoffset::psize, bool doublebuffer = false>
+            bdma(mode mode, datasize psize, bool pincrement, std::uint32_t paddress, datasize msize, bool mincrement, uint32_t m0address, uint32_t m1address, uint16_t numofdata,
+                 priority priority = priority::low, bool circular = false, pincoffset pincoffset = pincoffset::psize, bool doublebuffer = false>
             ){
                 reg::write(std::ref(channelHandle_->CCR),
                     //Interrupts are not enabled here and the channel is not yet being enabled
@@ -95,11 +95,11 @@ namespace bdma{
                 reg::clear(std::ref(channelHandle_->CCR), BDMA_CCR_EN);
             }
 
-            void setTargetMemory(bdma::targetmem memory){
+            void setTargetMemory(targetmem memory){
                 reg::change(std::ref(channelHandle_->CCR), 0x01, static_cast<std::uint8_t>(memory), BDMA_CCR_CT_Pos);
             }
 
-            void enableInterrupt(std::vector<bdma::interrupt> interrupts){
+            void enableInterrupt(std::vector<interrupt> interrupts){
 
                 std::uint8_t mask_ = 0;
 
@@ -126,7 +126,7 @@ namespace bdma{
                 reg::set(std::ref(channelHandle_->CCR), mask_);
             }
 
-            void enableInterrupt(bdma::interrupt interrupt){
+            void enableInterrupt(interrupt interrupt){
                 switch(interrupt){
                 case interrupt::transferHalfComplete:
                     reg::set(std::ref(channelHandle_->CCR), BDMA_CCR_HTIE);
@@ -141,9 +141,9 @@ namespace bdma{
                 }
             }
 
-            void disableInterrupt(std::vector<bdma::interrupt> interrupts){
+            void disableInterrupt(std::vector<interrupt> interrupts){
 
-                uint8_t mask_ = 0;
+                std::uint8_t mask_ = 0;
 
                 for(auto i : interrupts){
                     //Merge the interrupts into single mask
@@ -167,7 +167,7 @@ namespace bdma{
                 reg::set(std::ref(channelHandle_->CCR), mask_);
             }
 
-            void disableInterrupt(bdma::interrupt interrupt){
+            void disableInterrupt(interrupt interrupt){
                 switch(interrupt){
                 case interrupt::transferHalfComplete:
                     reg::clear(std::ref(channelHandle_->CCR), BDMA_CCR_HTIE);
@@ -182,7 +182,7 @@ namespace bdma{
                 }
             }
 
-            void clearInterruptFlag(bdma::interrupt interrupt){
+            void clearInterruptFlag(interrupt interrupt){
                 switch (Channel){
                     case channel::channel0:
                         reg::set(std::ref(bdmaHandle_->IFCR), interrupt, 0);
@@ -206,7 +206,7 @@ namespace bdma{
                 }
             }
 
-            bool getInterruptFlag(bdma::interrupt interrupt){
+            bool getInterruptFlag(interrupt interrupt){
                 switch (Channel){
                     case channel::channel0:
                         return static_cast<bool>(reg::set(std::ref(bdmaHandle_->ISR), interrupt, 0));

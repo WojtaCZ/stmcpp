@@ -196,20 +196,36 @@ namespace usart{
                 reg::clear(std::ref(usartHandle_->CR1), USART_CR1_UE);
             }
 
-            void enableTX() const {
+            void enableTx() const {
                 reg::set(std::ref(usartHandle_->CR1), USART_CR1_TE);
             }
 
-            void disableTX() const {
+            void disableTx() const {
                 reg::clear(std::ref(usartHandle_->CR1), USART_CR1_TE);
             }
 
-            void enableRX() const {
+            void enableTxDma() const {
+                reg::set(std::ref(USART2->CR3), USART_CR3_DMAT);
+            }
+
+            void disableTxDma() const {
+                reg::clear(std::ref(USART2->CR3), USART_CR3_DMAT);
+            }
+
+            void enableRx() const {
                 reg::set(std::ref(usartHandle_->CR1), USART_CR1_RE);
             }
 
-            void disableRX() const {
+            void disableRx() const {
                 reg::clear(std::ref(usartHandle_->CR1), USART_CR1_RE);
+            }
+
+            void enableRxDma() const {
+                reg::set(std::ref(USART2->CR3), USART_CR3_DMAR);
+            }
+
+            void disableRxDma() const {
+                reg::clear(std::ref(USART2->CR3), USART_CR3_DMAR);
             }
 
             void transmit(std::uint8_t data) const {
@@ -234,7 +250,7 @@ namespace usart{
                 reg::change(std::ref(usartHandle_->RTOR), 0x00FFFFFF, timeout);
             }
 
-            void enableDE(usart::driverenablepol depolarity = usart::driverenablepol::activehigh, std::uint8_t assertion = 0, std::uint8_t deassertion = 0) const {
+            void enableDe(usart::driverenablepol depolarity = usart::driverenablepol::activehigh, std::uint8_t assertion = 0, std::uint8_t deassertion = 0) const {
                 reg::set(std::ref(usartHandle_->CR1),
                     ((assertion & 0b11111) << USART_CR1_DEAT_Pos) |
                     ((deassertion & 0b11111) << USART_CR1_DEDT_Pos) 
@@ -246,7 +262,7 @@ namespace usart{
                 );
             }
 
-            void disableDE() const {
+            void disableDe() const {
                 reg::clear(std::ref(usartHandle_->CR1),
                     (0b11111 << USART_CR1_DEAT_Pos) |
                     (0b11111 << USART_CR1_DEDT_Pos) 
@@ -258,7 +274,7 @@ namespace usart{
                 );
             }
 
-            void enableCK(usart::clockpol clockpol = usart::clockpol::idlelow, usart::clockphase clockphase = usart::clockphase::firsttransition, bool lastbitclock = false) const {
+            void enableCk(usart::clockpol clockpol = usart::clockpol::idlelow, usart::clockphase clockphase = usart::clockphase::firsttransition, bool lastbitclock = false) const {
                 reg::set(std::ref(usartHandle_->CR2),
                     (                                  0b1 << USART_CR2_CLKEN_Pos) |
                     ((static_cast<uint8_t>(clockpol) & 0b1) << USART_CR2_CPOL_Pos) |
@@ -267,7 +283,7 @@ namespace usart{
                 );
             }
 
-            void disableCK() const {
+            void disableCk() const {
                 reg::clear(std::ref(usartHandle_->CR2),
                     (0b1 << USART_CR2_CLKEN_Pos) |
                     (0b1 << USART_CR2_CPOL_Pos) |

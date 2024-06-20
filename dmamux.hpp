@@ -186,111 +186,113 @@ namespace dmamux1{
 
     template<channel Channel>
     class dmamux{
-        public:
-            dmamux(dmamux::request request, uint8_t numreq = 1, bool syncenable = false, dmamux::sync sync = dmamux::sync::dmamux1_evt0, dmamux::polarity polarity = dmamux::polarity::noevent, bool eventenable = false, bool interruptenable = false){
+        private:
+            DMAMUX_Channel_TypeDef * const channelHandle_ = reinterpret_cast<DMAMUX_Channel_TypeDef *>(static_cast<std::uint32_t>(DMAMUX1_BASE) + static_cast<std::uint32_t>(Channel));
+            DMAMUX_ChannelStatus_TypeDef * const channelStatusHandle_ = reinterpret_cast<DMAMUX_ChannelStatus_TypeDef *>(static_cast<std::uint32_t>(DMAMUX1_ChannelStatus_BASE));
 
-                assert(numreq_ < 32, "The number of requests cannot be greater than 31!");
-                assert(numreq_ > 0, "The number of requests ha to be greater than zero!");
-                
+            constexpr auto getChannelIdx_() const {
+                return static_cast<std::uint32_t>(Channel)/4;
+            }
+
+        public:
+            dmamux(request request, std::uint8_t numreq = 1, bool syncenable = false, sync sync = sync::dmamux1_evt0, polarity polarity = polarity::noevent, bool eventenable = false, bool intenable = false){
                 //Write the channel configuration
-                reg::write<static_cast<uint32_t>(DMAMUX1_BASE) + static_cast<uint32_t>(channel_) + offsetof(DMAMUX_Channel_TypeDef, CCR)>( 
-                    ((static_cast<uint8_t>(request_) & 0b01111111) << DMAMUX_CxCR_DMAREQ_ID_Pos) |
-                    ((static_cast<uint8_t>(interruptenable_) & 0b1) << DMAMUX_CxCR_SOIE_Pos) | 
-                    ((static_cast<uint8_t>(eventenable_) & 0b1) << DMAMUX_CxCR_EGE_Pos) |
-                    ((static_cast<uint8_t>(syncenable_) & 0b1) << DMAMUX_CxCR_SE_Pos) |
-                    ((static_cast<uint8_t>(polarity_) & 0b11) << DMAMUX_CxCR_SPOL_Pos) |
-                    (((static_cast<uint8_t>(numreq_) - 1) & 0b11111) << DMAMUX_CxCR_NBREQ_Pos) |
-                    ((static_cast<uint8_t>(sync_) & 0b111) << DMAMUX_CxCR_SYNC_ID_Pos) 
+                reg::write(std::ref(channelHandle_->CCR),
+                    ((static_cast<std::uint8_t>(request) & 0b01111111) << DMAMUX_CxCR_DMAREQ_ID_Pos) |
+                    ((static_cast<std::uint8_t>(intenable) & 0b1) << DMAMUX_CxCR_SOIE_Pos) | 
+                    ((static_cast<std::uint8_t>(eventenable) & 0b1) << DMAMUX_CxCR_EGE_Pos) |
+                    ((static_cast<std::uint8_t>(syncenable) & 0b1) << DMAMUX_CxCR_SE_Pos) |
+                    ((static_cast<std::uint8_t>(polarity) & 0b11) << DMAMUX_CxCR_SPOL_Pos) |
+                    (((static_cast<std::uint8_t>(numreq) - 1) & 0b11111) << DMAMUX_CxCR_NBREQ_Pos) |
+                    ((static_cast<std::uint8_t>(sync) & 0b111) << DMAMUX_CxCR_SYNC_ID_Pos) 
                 );
             }
 
-            void setNumReq(uint8_t num_){
-
-                static_assert(numreq_ < 32, "The number of requests cannot be greater than 31!");
-                static_assert(numreq_ > 0, "The number of requests ha to be greater than zero!");
-
-                reg::clear<static_cast<uint32_t>(DMAMUX1_BASE) + static_cast<uint32_t>(channel_) + offsetof(DMAMUX_Channel_TypeDef, CCR)>(0b11111 << DMAMUX_CxCR_NBREQ_Pos);
-                reg::set<static_cast<uint32_t>(DMAMUX1_BASE) + static_cast<uint32_t>(channel_) + offsetof(DMAMUX_Channel_TypeDef, CCR)>(((static_cast<uint8_t>(num_) - 1) & 0b11111) << DMAMUX_CxCR_NBREQ_Pos);
+            void setNumReq(uint8_t number){
+                reg::change(std::ref(channelHandle_->CCR), 0x1F, (static_cast<std::uint8_t>(number) - 1), DMAMUX_CxCR_NBREQ_Pos);
             }
 
             void enableSync(){
-                reg::set<static_cast<uint32_t>(DMAMUX1_BASE) + static_cast<uint32_t>(channel_) + offsetof(DMAMUX_Channel_TypeDef, CCR)>(0b1 << DMAMUX_CxCR_SE_Pos);
+                reg::set(std::ref(channelHandle_->CCR), DMAMUX_CxCR_SE);
             }
 
             void disableSync(){
-                reg::clear<static_cast<uint32_t>(DMAMUX1_BASE) + static_cast<uint32_t>(channel_) + offsetof(DMAMUX_Channel_TypeDef, CCR)>(0b1 << DMAMUX_CxCR_SE_Pos);
+                reg::clear(std::ref(channelHandle_->CCR), DMAMUX_CxCR_SE);
             }
 
-            void setPolarity(polarity p){
-                reg::clear<static_cast<uint32_t>(DMAMUX1_BASE) + static_cast<uint32_t>(channel_) + offsetof(DMAMUX_Channel_TypeDef, CCR)>(0b11 << DMAMUX_CxCR_SPOL_Pos);
-                reg::set<static_cast<uint32_t>(DMAMUX1_BASE) + static_cast<uint32_t>(channel_) + offsetof(DMAMUX_Channel_TypeDef, CCR)>((static_cast<uint8_t>(polarity_) & 0b11) << DMAMUX_CxCR_SPOL_Pos);
+            void setPolarity(polarity polarity){
+                reg::change(std::ref(channelHandle_->CCR), 0x03, static_cast<std::uint8_t>(polarity), DMAMUX_CxCR_SPOL_Pos);
             }
 
             void enableEvent(){
-                reg::set<static_cast<uint32_t>(DMAMUX1_BASE) + static_cast<uint32_t>(channel_) + offsetof(DMAMUX_Channel_TypeDef, CCR)>(0b1 << DMAMUX_CxCR_EGE_Pos);
+                reg::set(std::ref(channelHandle_->CCR), DMAMUX_CxCR_EGE);
             }
 
             void disableEvent(){
-                reg::clear<static_cast<uint32_t>(DMAMUX1_BASE) + static_cast<uint32_t>(channel_) + offsetof(DMAMUX_Channel_TypeDef, CCR)>(0b1 << DMAMUX_CxCR_EGE_Pos);
+                reg::clear(std::ref(channelHandle_->CCR), DMAMUX_CxCR_EGE);
             }
 
             void enableInterrupt(){
-                reg::set<static_cast<uint32_t>(DMAMUX1_BASE) + static_cast<uint32_t>(channel_) + offsetof(DMAMUX_Channel_TypeDef, CCR)>(0b1 << DMAMUX_CxCR_SOIE_Pos);
+                reg::set(std::ref(channelHandle_->CCR), DMAMUX_CxCR_SOIE);
             }
 
             void disableInterrupt(){
-                reg::clear<static_cast<uint32_t>(DMAMUX1_BASE) + static_cast<uint32_t>(channel_) + offsetof(DMAMUX_Channel_TypeDef, CCR)>(0b1 << DMAMUX_CxCR_SOIE_Pos);
+                reg::clear(std::ref(channelHandle_->CCR), DMAMUX_CxCR_SOIE);
             }
 
             bool getInterruptFlag(){
-                return static_cast<bool>(reg::read<static_cast<uint32_t>(DMAMUX1_ChannelStatus_BASE) + offsetof(DMAMUX_ChannelStatus_TypeDef, CSR)>(0b1 << (static_cast<uint32_t>(channel_)/4)));
+                return static_cast<bool>(reg::read(std::ref(channelStatusHandle_->CSR), 0b1 << getChannelIdx_()));
             }
 
             void clearInterruptFlag(){
-                reg::write<static_cast<uint32_t>(DMAMUX1_ChannelStatus_BASE) + offsetof(DMAMUX_ChannelStatus_TypeDef, CFR)>(0b1 << (static_cast<uint32_t>(channel_)/4));
+                reg::write(std::ref(channelStatusHandle_->CSR), 0b1 << getChannelIdx_());
             }
         };
 
-        template<generator generator_, trigger trigger_, polarity polarity_, uint8_t numreq_ = 1, bool interruptenable_ = false>
+        template<generator Generator>
         class reqgen{
-            public:
-                reqgen(){
+            private:
+                DMAMUX_RequestGen_TypeDef * const reqgenHandle_ = reinterpret_cast<DMAMUX_RequestGen_TypeDef *>(static_cast<std::uint32_t>(DMAMUX1_BASE) + static_cast<std::uint32_t>(Generator));
+                DMAMUX_RequestGenStatus_TypeDef * const reqgenStatusHandle_ = reinterpret_cast<DMAMUX_RequestGenStatus_TypeDef *>(static_cast<std::uint32_t>(DMAMUX1_RequestGenStatus_BASE));
 
-                    static_assert(numreq_ < 32, "The number of requests cannot be greater than 31!");
-                    static_assert(numreq_ > 0, "The number of requests ha to be greater than zero!");
-                    
+                constexpr auto getGenIdx_() const {
+                    return (static_cast<std::uint32_t>(Generator) - 0x100UL) / 4;
+                }
+
+            public:
+                reqgen(trigger trigger, polarity polarity, std::uint8_t numreq = 1, bool intenable = false){                   
                     //Write the channel configuration
-                    reg::write<static_cast<uint32_t>(DMAMUX1_BASE) + static_cast<uint32_t>(generator_) + offsetof(DMAMUX_RequestGen_TypeDef, RGCR)>( 
-                        ((static_cast<uint8_t>(trigger_) & 0b111) << DMAMUX_RGxCR_SIG_ID_Pos) |
-                        ((static_cast<uint8_t>(interruptenable_) & 0b1) << DMAMUX_RGxCR_OIE_Pos) | 
+                    reg::write(std::ref(reqgenHandle_->RGCR), 
+                        ((static_cast<std::uint8_t>(trigger) & 0b111) << DMAMUX_RGxCR_SIG_ID_Pos) |
+                        ((static_cast<std::uint8_t>(intenable) & 0b1) << DMAMUX_RGxCR_OIE_Pos) | 
                         //Generator is not enabled here
-                        ((static_cast<uint8_t>(polarity_) & 0b11) << DMAMUX_RGxCR_GPOL_Pos) |
-                        (((static_cast<uint8_t>(numreq_) - 1) & 0b11111) << DMAMUX_RGxCR_GNBREQ_Pos) 
+                        ((static_cast<std::uint8_t>(polarity) & 0b11) << DMAMUX_RGxCR_GPOL_Pos) |
+                        (((static_cast<std::uint8_t>(numreq) - 1) & 0b11111) << DMAMUX_RGxCR_GNBREQ_Pos) 
                     );
                 }
 
                 void enable(){
-                    reg::set<static_cast<uint32_t>(DMAMUX1_BASE) + static_cast<uint32_t>(generator_) + offsetof(DMAMUX_RequestGen_TypeDef, RGCR)>(0b1 << DMAMUX_RGxCR_GE_Pos);
+                    reg::set(std::ref(reqgenHandle_->RGCR), DMAMUX_RGxCR_GE);
                 }
 
                 void disable(){
-                    reg::clear<static_cast<uint32_t>(DMAMUX1_BASE) + static_cast<uint32_t>(generator_) + offsetof(DMAMUX_RequestGen_TypeDef, RGCR)>(0b1 << DMAMUX_RGxCR_GE_Pos);
+                    reg::clear(std::ref(reqgenHandle_->RGCR), DMAMUX_RGxCR_GE);
                 }
 
                 void enableInterrupt(){
-                    reg::set<static_cast<uint32_t>(DMAMUX1_BASE) + static_cast<uint32_t>(generator_) + offsetof(DMAMUX_RequestGen_TypeDef, RGCR)>(0b1 << DMAMUX_RGxCR_OIE_Pos);
+                    reg::set(std::ref(reqgenHandle_->RGCR), DMAMUX_RGxCR_OIE);
                 }
 
                 void disableInterrupt(){
-                    reg::clear<static_cast<uint32_t>(DMAMUX1_BASE) + static_cast<uint32_t>(generator_) + offsetof(DMAMUX_RequestGen_TypeDef, RGCR)>(0b1 << DMAMUX_RGxCR_OIE_Pos);
+                    reg::clear(std::ref(reqgenHandle_->RGCR), DMAMUX_RGxCR_OIE);
                 }
 
                 bool getInterruptFlag(){
-                    return static_cast<bool>(reg::read<static_cast<uint32_t>(DMAMUX1_RequestGenStatus_BASE) + offsetof(DMAMUX_RequestGenStatus_TypeDef, RGSR)>(0b1 << ((static_cast<uint32_t>(generator_) - 0x100UL)/4)));
+                    return static_cast<bool>(reg::read(std::ref(reqgenStatusHandle_->RGSR), 0b1 << getGenIdx_()));
                 }
 
                 void clearInterruptFlag(){
-                    reg::write<static_cast<uint32_t>(DMAMUX1_RequestGenStatus_BASE) + offsetof(DMAMUX_RequestGenStatus_TypeDef, RGCFR)>(0b1 << ((static_cast<uint32_t>(generator_) - 0x100UL)/4));
+                    reg::write(std::ref(reqgenStatusHandle_->RGCFR), 0b1 << getGenIdx_());
                 }
     };
 
@@ -298,7 +300,7 @@ namespace dmamux1{
 
 namespace dmamux2{
 
-    enum class channel {
+    enum class channel : std::uint32_t {
         channel0    = 0x000UL,
         channel1    = 0x004UL,
         channel2    = 0x008UL,
@@ -309,7 +311,7 @@ namespace dmamux2{
         channel7    = 0x01CUL,
     };  
 
-    enum class request {
+    enum class request : std::uint8_t {
         dmamux2_req_gen0    = 1,
         dmamux2_req_gen1    = 2,
         dmamux2_req_gen2    = 3,
@@ -329,7 +331,7 @@ namespace dmamux2{
         adc3_dma            = 17
     };
     
-    enum class trigger {
+    enum class trigger : std::uint8_t {
         dmamux2_evt0        = 0,
         dmamux2_evt1        = 1,
         dmamux2_evt2        = 2,
@@ -362,7 +364,7 @@ namespace dmamux2{
         bdma_ch1_it         = 29
     };
 
-    enum class sync {
+    enum class sync : std::uint8_t {
         dmamux2_evt0        = 0,
         dmamux2_evt1        = 1,
         dmamux2_evt2        = 2,
@@ -381,14 +383,14 @@ namespace dmamux2{
         syscfg_exti2_mux    = 15,
     };
 
-    enum class polarity {
+    enum class polarity : std::uint8_t {
         noevent     = 0b00,
         rising      = 0b01,
         falling     = 0b10,
         both        = 0b11
     };
 
-    enum class generator {
+    enum class generator : std::uint32_t {
        gen0 = 0x100UL,
        gen1 = 0x104UL,
        gen2 = 0x108UL,
@@ -399,115 +401,116 @@ namespace dmamux2{
        gen7 = 0x11CUL,
     };
 
-    template<channel channel_, request request_, uint8_t numreq_ = 1, bool syncenable_ = false, sync sync_ = sync::dmamux2_evt0, polarity polarity_ = polarity::noevent, bool eventenable_ = false, bool interruptenable_ = false>
+    template<channel Channel>
     class dmamux{
-        public:
-            dmamux(){
+        private:
+            DMAMUX_Channel_TypeDef * const channelHandle_ = reinterpret_cast<DMAMUX_Channel_TypeDef *>(static_cast<uint32_t>(DMAMUX1_BASE) + static_cast<std::uint32_t>(Channel));
+            DMAMUX_ChannelStatus_TypeDef * const channelStatusHandle_ = reinterpret_cast<DMAMUX_ChannelStatus_TypeDef *>(static_cast<std::uint32_t>(DMAMUX1_ChannelStatus_BASE));
 
-                static_assert(numreq_ < 32, "The number of requests cannot be greater than 31!");
-                static_assert(numreq_ > 0, "The number of requests ha to be greater than zero!");
-                
+            constexpr auto getChannelIdx_() const {
+                return static_cast<std::uint32_t>(Channel)/4;
+            }
+            
+        public:
+            dmamux(request request, std::uint8_t numreq = 1, bool syncenable = false, sync sync = sync::dmamux2_evt0, polarity polarity = polarity::noevent, bool eventenable = false, bool intenable = false){
                 //Write the channel configuration
-                reg::write<static_cast<uint32_t>(DMAMUX2_BASE) + static_cast<uint32_t>(channel_) + offsetof(DMAMUX_Channel_TypeDef, CCR)>( 
-                    ((static_cast<uint8_t>(request_) & 0b00011111) << DMAMUX_CxCR_DMAREQ_ID_Pos) |
-                    ((static_cast<uint8_t>(interruptenable_) & 0b1) << DMAMUX_CxCR_SOIE_Pos) | 
-                    ((static_cast<uint8_t>(eventenable_) & 0b1) << DMAMUX_CxCR_EGE_Pos) |
-                    ((static_cast<uint8_t>(syncenable_) & 0b1) << DMAMUX_CxCR_SE_Pos) |
-                    ((static_cast<uint8_t>(polarity_) & 0b11) << DMAMUX_CxCR_SPOL_Pos) |
-                    (((static_cast<uint8_t>(numreq_) - 1) & 0b11111) << DMAMUX_CxCR_NBREQ_Pos) |
-                    ((static_cast<uint8_t>(sync_) & 0b11111) << DMAMUX_CxCR_SYNC_ID_Pos) 
+                reg::write(std::ref(channelHandle_->CCR),
+                    ((static_cast<std::uint8_t>(request) & 0b01111111) << DMAMUX_CxCR_DMAREQ_ID_Pos) |
+                    ((static_cast<std::uint8_t>(intenable) & 0b1) << DMAMUX_CxCR_SOIE_Pos) | 
+                    ((static_cast<std::uint8_t>(eventenable) & 0b1) << DMAMUX_CxCR_EGE_Pos) |
+                    ((static_cast<std::uint8_t>(syncenable) & 0b1) << DMAMUX_CxCR_SE_Pos) |
+                    ((static_cast<std::uint8_t>(polarity) & 0b11) << DMAMUX_CxCR_SPOL_Pos) |
+                    (((static_cast<std::uint8_t>(numreq) - 1) & 0b11111) << DMAMUX_CxCR_NBREQ_Pos) |
+                    ((static_cast<std::uint8_t>(sync) & 0b111) << DMAMUX_CxCR_SYNC_ID_Pos) 
                 );
             }
 
-            void setNumReq(uint8_t num_){
-
-                static_assert(numreq_ < 32, "The number of requests cannot be greater than 31!");
-                static_assert(numreq_ > 0, "The number of requests ha to be greater than zero!");
-
-                reg::clear<static_cast<uint32_t>(DMAMUX2_BASE) + static_cast<uint32_t>(channel_) + offsetof(DMAMUX_Channel_TypeDef, CCR)>(0b11111 << DMAMUX_CxCR_NBREQ_Pos);
-                reg::set<static_cast<uint32_t>(DMAMUX2_BASE) + static_cast<uint32_t>(channel_) + offsetof(DMAMUX_Channel_TypeDef, CCR)>(((static_cast<uint8_t>(num_) - 1) & 0b11111) << DMAMUX_CxCR_NBREQ_Pos);
+            void setNumReq(std::uint8_t number){
+                reg::change(std::ref(channelHandle_->CCR), 0x1F, (static_cast<std::uint8_t>(number) - 1), DMAMUX_CxCR_NBREQ_Pos);
             }
 
             void enableSync(){
-                reg::set<static_cast<uint32_t>(DMAMUX2_BASE) + static_cast<uint32_t>(channel_) + offsetof(DMAMUX_Channel_TypeDef, CCR)>(0b1 << DMAMUX_CxCR_SE_Pos);
+                reg::set(std::ref(channelHandle_->CCR), DMAMUX_CxCR_SE);
             }
 
             void disableSync(){
-                reg::clear<static_cast<uint32_t>(DMAMUX2_BASE) + static_cast<uint32_t>(channel_) + offsetof(DMAMUX_Channel_TypeDef, CCR)>(0b1 << DMAMUX_CxCR_SE_Pos);
+                reg::clear(std::ref(channelHandle_->CCR), DMAMUX_CxCR_SE);
             }
 
-            void setPolarity(polarity pol_){
-                reg::clear<static_cast<uint32_t>(DMAMUX2_BASE) + static_cast<uint32_t>(channel_) + offsetof(DMAMUX_Channel_TypeDef, CCR)>(0b11 << DMAMUX_CxCR_SPOL_Pos);
-                reg::set<static_cast<uint32_t>(DMAMUX2_BASE) + static_cast<uint32_t>(channel_) + offsetof(DMAMUX_Channel_TypeDef, CCR)>((static_cast<uint8_t>(pol_) & 0b11) << DMAMUX_CxCR_SPOL_Pos);
+            void setPolarity(polarity polarity){
+                reg::change(std::ref(channelHandle_->CCR), 0x03, static_cast<std::uint8_t>(polarity), DMAMUX_CxCR_SPOL_Pos);
             }
 
             void enableEvent(){
-                reg::set<static_cast<uint32_t>(DMAMUX2_BASE) + static_cast<uint32_t>(channel_) + offsetof(DMAMUX_Channel_TypeDef, CCR)>(0b1 << DMAMUX_CxCR_EGE_Pos);
+                reg::set(std::ref(channelHandle_->CCR), DMAMUX_CxCR_EGE);
             }
 
             void disableEvent(){
-                reg::clear<static_cast<uint32_t>(DMAMUX2_BASE) + static_cast<uint32_t>(channel_) + offsetof(DMAMUX_Channel_TypeDef, CCR)>(0b1 << DMAMUX_CxCR_EGE_Pos);
+                reg::clear(std::ref(channelHandle_->CCR), DMAMUX_CxCR_EGE);
             }
 
             void enableInterrupt(){
-                reg::set<static_cast<uint32_t>(DMAMUX2_BASE) + static_cast<uint32_t>(channel_) + offsetof(DMAMUX_Channel_TypeDef, CCR)>(0b1 << DMAMUX_CxCR_SOIE_Pos);
+                reg::set(std::ref(channelHandle_->CCR), DMAMUX_CxCR_SOIE);
             }
 
             void disableInterrupt(){
-                reg::clear<static_cast<uint32_t>(DMAMUX2_BASE) + static_cast<uint32_t>(channel_) + offsetof(DMAMUX_Channel_TypeDef, CCR)>(0b1 << DMAMUX_CxCR_SOIE_Pos);
+                reg::clear(std::ref(channelHandle_->CCR), DMAMUX_CxCR_SOIE);
             }
 
             bool getInterruptFlag(){
-                return static_cast<bool>(reg::read<static_cast<uint32_t>(DMAMUX2_BASE) + offsetof(DMAMUX_ChannelStatus_TypeDef, CSR)>(0b1 << (static_cast<uint32_t>(channel_)/4)));
+                return static_cast<bool>(reg::read(std::ref(channelStatusHandle_->CSR), 0b1 << getChannelIdx_()));
             }
 
             void clearInterruptFlag(){
-                reg::write<static_cast<uint32_t>(DMAMUX2_BASE) + offsetof(DMAMUX_ChannelStatus_TypeDef, CFR)>(0b1 << (static_cast<uint32_t>(channel_)/4));
+                reg::write(std::ref(channelStatusHandle_->CSR), 0b1 << getChannelIdx_());
             }
-
     };
 
-    template<generator generator_, trigger trigger_, polarity polarity_, uint8_t numreq_ = 1, bool interruptenable_ = false>
-    class reqgen{
-        public:
-            reqgen(){
+    template<generator Generator>
+        class reqgen{
+            private:
+                DMAMUX_RequestGen_TypeDef * const reqgenHandle_ = reinterpret_cast<DMAMUX_RequestGen_TypeDef *>(static_cast<std::uint32_t>(DMAMUX2_BASE) + static_cast<std::uint32_t>(Generator));
+                DMAMUX_RequestGenStatus_TypeDef * const reqgenStatusHandle_ = reinterpret_cast<DMAMUX_RequestGenStatus_TypeDef *>(static_cast<std::uint32_t>(DMAMUX2_RequestGenStatus_BASE));
 
-                static_assert(numreq_ < 32, "The number of requests cannot be greater than 31!");
-                static_assert(numreq_ > 0, "The number of requests ha to be greater than zero!");
+                constexpr auto getGenIdx_() const {
+                    return (static_cast<std::uint32_t>(Generator) - 0x100UL) / 4;
+                }
 
-                //Write the channel configuration
-                reg::write<static_cast<uint32_t>(DMAMUX2_BASE) + static_cast<uint32_t>(generator_) + offsetof(DMAMUX_RequestGen_TypeDef, RGCR)>( 
-                    ((static_cast<uint8_t>(trigger_) & 0b111) << DMAMUX_RGxCR_SIG_ID_Pos) |
-                    ((static_cast<uint8_t>(interruptenable_) & 0b1) << DMAMUX_RGxCR_OIE_Pos) | 
-                    //Generator is not enabled here
-                    ((static_cast<uint8_t>(polarity_) & 0b11) << DMAMUX_RGxCR_GPOL_Pos) |
-                    (((static_cast<uint8_t>(numreq_) - 1) & 0b11111) << DMAMUX_RGxCR_GNBREQ_Pos) 
-                );
-            }
+            public:
+                reqgen(trigger trigger, polarity polarity, uint8_t numreq = 1, bool intenable = false){                   
+                    //Write the channel configuration
+                    reg::write(std::ref(reqgenHandle_->RGCR), 
+                        ((static_cast<std::uint8_t>(trigger) & 0b111) << DMAMUX_RGxCR_SIG_ID_Pos) |
+                        ((static_cast<std::uint8_t>(intenable) & 0b1) << DMAMUX_RGxCR_OIE_Pos) | 
+                        //Generator is not enabled here
+                        ((static_cast<std::uint8_t>(polarity) & 0b11) << DMAMUX_RGxCR_GPOL_Pos) |
+                        (((static_cast<std::uint8_t>(numreq) - 1) & 0b11111) << DMAMUX_RGxCR_GNBREQ_Pos) 
+                    );
+                }
 
-            void enable(){
-                reg::set<static_cast<uint32_t>(DMAMUX2_BASE) + static_cast<uint32_t>(generator_) + offsetof(DMAMUX_RequestGen_TypeDef, RGCR)>(0b1 << DMAMUX_RGxCR_GE_Pos);
-            }
+                void enable(){
+                    reg::set(std::ref(reqgenHandle_->RGCR), DMAMUX_RGxCR_GE);
+                }
 
-            void disable(){
-                reg::clear<static_cast<uint32_t>(DMAMUX2_BASE) + static_cast<uint32_t>(generator_) + offsetof(DMAMUX_RequestGen_TypeDef, RGCR)>(0b1 << DMAMUX_RGxCR_GE_Pos);
-            }
+                void disable(){
+                    reg::clear(std::ref(reqgenHandle_->RGCR), DMAMUX_RGxCR_GE);
+                }
 
-            void enableInterrupt(){
-                reg::set<static_cast<uint32_t>(DMAMUX2_BASE) + static_cast<uint32_t>(generator_) + offsetof(DMAMUX_RequestGen_TypeDef, RGCR)>(0b1 << DMAMUX_RGxCR_OIE_Pos);
-            }
+                void enableInterrupt(){
+                    reg::set(std::ref(reqgenHandle_->RGCR), DMAMUX_RGxCR_OIE);
+                }
 
-            void disableInterrupt(){
-                reg::clear<static_cast<uint32_t>(DMAMUX2_BASE) + static_cast<uint32_t>(generator_) + offsetof(DMAMUX_RequestGen_TypeDef, RGCR)>(0b1 << DMAMUX_RGxCR_OIE_Pos);
-            }
+                void disableInterrupt(){
+                    reg::clear(std::ref(reqgenHandle_->RGCR), DMAMUX_RGxCR_OIE);
+                }
 
-            bool getInterruptFlag(){
-                return static_cast<bool>(reg::read<static_cast<uint32_t>(DMAMUX2_RequestGenStatus_BASE) + offsetof(DMAMUX_RequestGenStatus_TypeDef, RGSR)>(0b1 << ((static_cast<uint32_t>(generator_) - 0x100UL)/4)));
-            }
+                bool getInterruptFlag(){
+                    return static_cast<bool>(reg::read(std::ref(reqgenStatusHandle_->RGSR), 0b1 << getGenIdx_()));
+                }
 
-            void clearInterruptFlag(){
-                reg::write<static_cast<uint32_t>(DMAMUX2_RequestGenStatus_BASE) + offsetof(DMAMUX_RequestGenStatus_TypeDef, RGCFR)>(0b1 << ((static_cast<uint32_t>(generator_) - 0x100UL)/4));
-            }
+                void clearInterruptFlag(){
+                    reg::write(std::ref(reqgenStatusHandle_->RGCFR), 0b1 << getGenIdx_());
+                }
     };
 
 }

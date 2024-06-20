@@ -95,10 +95,10 @@ namespace dma{
             DMA_Stream_TypeDef * const streamHandle_ = reinterpret_cast<DMA_Stream_TypeDef *>(static_cast<std::uint32_t>(Peripheral) + static_cast<std::uint32_t>(Stream));
             DMA_TypeDef * const dmaHandle_ = reinterpret_cast<DMA_TypeDef *>(static_cast<std::uint32_t>(Peripheral));
         public:
-            dma(dma::mode mode, dma::datasize psize, bool pincrement, std::uint32_t paddress, dma::datasize msize, bool mincrement, std::uint32_t m0address, std::uint32_t m1address, std::uint16_t numofdata,
-                dma::priority priority = priority::low, bool circular = false, dma::pincoffset pincoffset = dma::pincoffset::psize,
-                bool doublebuffer = false, bool bufferedtransfers = false, dma::flowcontroller flowcontroller = dma::flowcontroller::dma,
-                dma::burstsize pburst = dma::burstsize::single, dma::burstsize mburst = dma::burstsize::single
+            dma(mode mode, datasize psize, bool pincrement, std::uint32_t paddress, datasize msize, bool mincrement, std::uint32_t m0address, std::uint32_t m1address, std::uint16_t numofdata,
+                priority priority = priority::low, bool circular = false, pincoffset pincoffset = pincoffset::psize,
+                bool doublebuffer = false, bool bufferedtransfers = false, flowcontroller flowcontroller = flowcontroller::dma,
+                burstsize pburst = burstsize::single, burstsize mburst = burstsize::single
                 ){
                 reg::write(std::ref(streamHandle_->CR),
                     //Interrupts are not enabled here and the channel is not yet being enabled
@@ -132,11 +132,11 @@ namespace dma{
                 reg::clear(std::ref(streamHandle_->CR), DMA_SxCR_EN);
             }
 
-            void setTargetMemory(dma::targetmem memory){
+            void setTargetMemory(targetmem memory){
                 reg::change(std::ref(streamHandle_->CR), 0x01, static_cast<std::uint8_t>(memory), DMA_SxCR_CT_Pos);
             }
 
-            void enableInterrupt(const std::vector<dma::interrupt> interrupts){
+            void enableInterrupt(const std::vector<interrupt> interrupts){
                 std::uint8_t mask_ = 0;
 
                 for(auto i : interrupts){
@@ -168,23 +168,23 @@ namespace dma{
                 reg::set(std::ref(streamHandle_->CR), mask_);
             }
 
-            void enableInterrupt(dma::interrupt interrupt){
-                if(interrupt == dma::interrupt::fifoError){
+            void enableInterrupt(interrupt interrupt){
+                if(interrupt == interrupt::fifoError){
                     //If the fifo interrupt should be enabled, set it
                     reg::set(std::ref(streamHandle_->FCR), DMA_SxFCR_FEIE);
                 }else{
                     //If the interrupt in the CR should be set, set it
                      switch(interrupt){
-                        case dma::interrupt::transferHalfComplete:
+                        case interrupt::transferHalfComplete:
                             reg::set(std::ref(streamHandle_->CR), DMA_SxCR_HTIE);
                             break;
-                        case dma::interrupt::transferComplete:
+                        case interrupt::transferComplete:
                             reg::set(std::ref(streamHandle_->CR), DMA_SxCR_TCIE);
                             break;
-                        case dma::interrupt::transferError:
+                        case interrupt::transferError:
                             reg::set(std::ref(streamHandle_->CR), DMA_SxCR_TEIE);
                             break;
-                        case dma::interrupt::directModeError:
+                        case interrupt::directModeError:
                             reg::set(std::ref(streamHandle_->CR), DMA_SxCR_DMEIE);
                             break;
                         
@@ -194,25 +194,25 @@ namespace dma{
                 }
             }
 
-            void disableInterrupt(const std::vector<dma::interrupt> interrupts){
+            void disableInterrupt(const std::vector<interrupt> interrupts){
                 std::uint8_t mask_ = 0;
 
                 for(auto i : interrupts){
-                    if(i == dma::interrupt::fifoError){
+                    if(i == interrupt::fifoError){
                         //If the fifo interrupt should be enabled, set it right away
                         reg::clear(std::ref(streamHandle_->FCR), DMA_SxFCR_FEIE);
                     }else{
                         switch(i){
-                        case dma::interrupt::transferHalfComplete:
+                        case interrupt::transferHalfComplete:
                             mask_ |= DMA_SxCR_HTIE;
                             break;
-                        case dma::interrupt::transferComplete:
+                        case interrupt::transferComplete:
                             mask_ |= DMA_SxCR_TCIE;
                             break;
-                        case dma::interrupt::transferError:
+                        case interrupt::transferError:
                             mask_ |= DMA_SxCR_TEIE;
                             break;
-                        case dma::interrupt::directModeError:
+                        case interrupt::directModeError:
                             mask_ |= DMA_SxCR_DMEIE;
                             break;
                         
@@ -226,23 +226,23 @@ namespace dma{
                 reg::clear(std::ref(streamHandle_->CR), mask_);
             }
 
-            void disableInterrupt(dma::interrupt interrupt){
+            void disableInterrupt(interrupt interrupt){
                 if(interrupt == dma::interrupt::fifoError){
                     //If the fifo interrupt should be enabled, set it
                     reg::clear(std::ref(streamHandle_->FCR), DMA_SxFCR_FEIE);
                 }else{
                     //If the interrupt in the CR should be set, set it
                      switch(interrupt){
-                        case dma::interrupt::transferHalfComplete:
+                        case interrupt::transferHalfComplete:
                             reg::clear(std::ref(streamHandle_->CR), DMA_SxCR_HTIE);
                             break;
-                        case dma::interrupt::transferComplete:
+                        case interrupt::transferComplete:
                             reg::clear(std::ref(streamHandle_->CR), DMA_SxCR_TCIE);
                             break;
-                        case dma::interrupt::transferError:
+                        case interrupt::transferError:
                             reg::clear(std::ref(streamHandle_->CR), DMA_SxCR_TEIE);
                             break;
-                        case dma::interrupt::directModeError:
+                        case interrupt::directModeError:
                             reg::clear(std::ref(streamHandle_->CR), DMA_SxCR_DMEIE);
                             break;
                         
@@ -253,7 +253,7 @@ namespace dma{
             }
 
 
-            void clearInterruptFlag(dma::interrupt interrupt){
+            void clearInterruptFlag(interrupt interrupt){
                 switch (Stream){
                     case stream::stream0:
                         reg::set(std::ref(dmaHandle_->LIFCR), static_cast<uint32_t>(interrupt), 0);
@@ -285,7 +285,7 @@ namespace dma{
                 }
             }
 
-            bool getInterruptFlag(dma::interrupt interrupt){
+            bool getInterruptFlag(interrupt interrupt){
                 switch (Stream){
                     case stream::stream0:
                         return static_cast<bool>(reg::read(std::ref(dmaHandle_->LISR), static_cast<uint32_t>(interrupt), 0));
@@ -317,8 +317,8 @@ namespace dma{
                 }
             }
 
-            void setFifoTreshold(dma::fifotreshold treshold){
-                reg::change(streamHandle_->FCR, 0x03, static_cast<std::uint8_t>(treshold), DMA_SxFCR_FTH_Pos);
+            void setFifoTreshold(fifotreshold treshold){
+                reg::change(std::ref(streamHandle_->FCR), 0x03, static_cast<std::uint8_t>(treshold), DMA_SxFCR_FTH_Pos);
             }
 
             fifostat getFifoStatus(){
@@ -326,7 +326,6 @@ namespace dma{
             }
 
     };
-
 }
 
 
