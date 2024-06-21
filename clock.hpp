@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <tuple>
+#include <array>
 
 #include "register.hpp"
 #include "stm32h753xx.h"
@@ -12,7 +13,131 @@
 namespace clock{
     
     void init();
-        
+
+    constexpr std::array<std::uint8_t, 9> peripheralRegisterMap_ = {
+        offsetof(RCC_TypeDef, AHB3ENR), offsetof(RCC_TypeDef, AHB1ENR), offsetof(RCC_TypeDef, AHB2ENR), offsetof(RCC_TypeDef, AHB4ENR), 
+        offsetof(RCC_TypeDef, APB3ENR), offsetof(RCC_TypeDef, APB1LENR), offsetof(RCC_TypeDef, APB1HENR), offsetof(RCC_TypeDef, APB2ENR), offsetof(RCC_TypeDef, APB4ENR)
+    };    
+
+    enum class peripheral : std::uint16_t {
+        mdma        = (0x0000) | RCC_AHB3ENR_MDMAEN_Pos,
+        dma2d       = (0x0000) | RCC_AHB3ENR_DMA2DEN_Pos,
+        jpgdec      = (0x0000) | RCC_AHB3ENR_JPGDECEN_Pos,
+        fmc         = (0x0000) | RCC_AHB3ENR_FMCEN_Pos,
+        qspi        = (0x0000) | RCC_AHB3ENR_QSPIEN_Pos,
+        sdmmc1      = (0x0000) | RCC_AHB3ENR_SDMMC1EN_Pos, 
+
+        dma1        = (0x0100) | RCC_AHB1ENR_DMA1EN_Pos,
+        dma2        = (0x0100) | RCC_AHB1ENR_DMA2EN_Pos,
+        adc12       = (0x0100) | RCC_AHB1ENR_ADC12EN_Pos,
+        eth1mac     = (0x0100) | RCC_AHB1ENR_ETH1MACEN_Pos,
+        eth1tx      = (0x0100) | RCC_AHB1ENR_ETH1TXEN_Pos,
+        eth1rx      = (0x0100) | RCC_AHB1ENR_ETH1RXEN_Pos,
+        usb1otg     = (0x0100) | RCC_AHB1ENR_USB1OTGHSEN_Pos,
+        usb1ulpi    = (0x0100) | RCC_AHB1ENR_USB1OTGHSULPIEN_Pos,
+        usb2otg     = (0x0100) | RCC_AHB1ENR_USB2OTGHSEN_Pos,
+        usb2ulpi    = (0x0100) | RCC_AHB1ENR_USB2OTGHSULPIEN_Pos,
+
+        dcmi        = (0x0200) | RCC_AHB2ENR_DCMIEN_Pos,
+        crypt       = (0x0200) | RCC_AHB2ENR_CRYPEN_Pos,
+        hash        = (0x0200) | RCC_AHB2ENR_HASHEN_Pos,
+        rng         = (0x0200) | RCC_AHB2ENR_RNGEN_Pos,
+        sdmmc2      = (0x0200) | RCC_AHB2ENR_SDMMC2EN_Pos,
+        sram1       = (0x0200) | RCC_AHB2ENR_SRAM1EN_Pos,
+        sram2       = (0x0200) | RCC_AHB2ENR_SRAM2EN_Pos,
+        sram3       = (0x0200) | RCC_AHB2ENR_SRAM3EN_Pos,
+
+        gpioa       = (0x0300) | RCC_AHB4ENR_GPIOAEN_Pos,
+        gpiob       = (0x0300) | RCC_AHB4ENR_GPIOBEN_Pos,
+        gpioc       = (0x0300) | RCC_AHB4ENR_GPIOCEN_Pos,
+        gpiod       = (0x0300) | RCC_AHB4ENR_GPIODEN_Pos,
+        gpioe       = (0x0300) | RCC_AHB4ENR_GPIOEEN_Pos,
+        gpiof       = (0x0300) | RCC_AHB4ENR_GPIOFEN_Pos,
+        gpiog       = (0x0300) | RCC_AHB4ENR_GPIOGEN_Pos,
+        gpioh       = (0x0300) | RCC_AHB4ENR_GPIOHEN_Pos,
+        gpioi       = (0x0300) | RCC_AHB4ENR_GPIOIEN_Pos,
+        gpioj       = (0x0300) | RCC_AHB4ENR_GPIOJEN_Pos,
+        gpiok       = (0x0300) | RCC_AHB4ENR_GPIOKEN_Pos,
+        crc         = (0x0300) | RCC_AHB4ENR_CRCEN_Pos,
+        bdma        = (0x0300) | RCC_AHB4ENR_BDMAEN_Pos,
+        adc3        = (0x0300) | RCC_AHB4ENR_ADC3EN_Pos,
+        hsem        = (0x0300) | RCC_AHB4ENR_HSEMEN_Pos,
+        backupram   = (0x0300) | RCC_AHB4ENR_BKPRAMEN_Pos,
+
+        ltdc        = (0x0400) | RCC_APB3ENR_LTDCEN_Pos,
+        wwdg1       = (0x0400) | RCC_APB3ENR_WWDG1EN_Pos,
+
+        tim2        = (0x0500) | RCC_APB1LENR_TIM2EN_Pos,
+        tim3        = (0x0500) | RCC_APB1LENR_TIM3EN_Pos,
+        tim4        = (0x0500) | RCC_APB1LENR_TIM4EN_Pos,
+        tim5        = (0x0500) | RCC_APB1LENR_TIM5EN_Pos,
+        tim6        = (0x0500) | RCC_APB1LENR_TIM6EN_Pos,
+        tim7        = (0x0500) | RCC_APB1LENR_TIM7EN_Pos,
+        tim12       = (0x0500) | RCC_APB1LENR_TIM12EN_Pos,
+        tim13       = (0x0500) | RCC_APB1LENR_TIM13EN_Pos,
+        tim14       = (0x0500) | RCC_APB1LENR_TIM14EN_Pos,
+        lptim1      = (0x0500) | RCC_APB1LENR_LPTIM1EN_Pos,
+        spi2        = (0x0500) | RCC_APB1LENR_SPI2EN_Pos,
+        spi3        = (0x0500) | RCC_APB1LENR_SPI3EN_Pos,
+        spdifrx     = (0x0500) | RCC_APB1LENR_SPDIFRXEN_Pos,
+        usart2      = (0x0500) | RCC_APB1LENR_USART2EN_Pos,
+        usart3      = (0x0500) | RCC_APB1LENR_USART3EN_Pos,
+        uart4       = (0x0500) | RCC_APB1LENR_UART4EN_Pos,
+        uart5       = (0x0500) | RCC_APB1LENR_UART5EN_Pos,
+        i2c1        = (0x0500) | RCC_APB1LENR_I2C1EN_Pos,
+        i2c2        = (0x0500) | RCC_APB1LENR_I2C2EN_Pos,
+        i2c3        = (0x0500) | RCC_APB1LENR_I2C3EN_Pos,
+        hdmicec     = (0x0500) | RCC_APB1LENR_CECEN_Pos,
+        dac12       = (0x0500) | RCC_APB1LENR_DAC12EN_Pos,
+        uart7       = (0x0500) | RCC_APB1LENR_UART7EN_Pos,
+        uart8       = (0x0500) | RCC_APB1LENR_UART8EN_Pos,
+
+        crs         = (0x0600) | RCC_APB1HENR_CRSEN_Pos,
+        swpen       = (0x0600) | RCC_APB1HENR_SWPMIEN_Pos,
+        opamp       = (0x0600) | RCC_APB1HENR_OPAMPEN_Pos,
+        mdios       = (0x0600) | RCC_APB1HENR_MDIOSEN_Pos,
+        fdcan       = (0x0600) | RCC_APB1HENR_FDCANEN_Pos,
+
+        tim1        = (0x0700) | RCC_APB2ENR_TIM1EN_Pos,
+        tim8        = (0x0700) | RCC_APB2ENR_TIM8EN_Pos,
+        usart1      = (0x0700) | RCC_APB2ENR_USART1EN_Pos,
+        usart6      = (0x0700) | RCC_APB2ENR_USART6EN_Pos,
+        spi1        = (0x0700) | RCC_APB2ENR_SPI1EN_Pos,
+        spi4        = (0x0700) | RCC_APB2ENR_SPI4EN_Pos,
+        tim15       = (0x0700) | RCC_APB2ENR_TIM15EN_Pos,
+        tim16       = (0x0700) | RCC_APB2ENR_TIM16EN_Pos,
+        tim17       = (0x0700) | RCC_APB2ENR_TIM17EN_Pos,
+        spi5        = (0x0700) | RCC_APB2ENR_SPI5EN_Pos,
+        sai1        = (0x0700) | RCC_APB2ENR_SAI1EN_Pos,
+        sai2        = (0x0700) | RCC_APB2ENR_SAI2EN_Pos,
+        sai3        = (0x0700) | RCC_APB2ENR_SAI3EN_Pos,
+        dfsdm1      = (0x0700) | RCC_APB2ENR_DFSDM1EN_Pos,
+        hrtim       = (0x0700) | RCC_APB2ENR_HRTIMEN_Pos,
+
+        syscfg      = (0x0800) | RCC_APB4ENR_SYSCFGEN_Pos,
+        lpuart1     = (0x0800) | RCC_APB4ENR_LPUART1EN_Pos,
+        spi6        = (0x0800) | RCC_APB4ENR_SPI6EN_Pos,
+        i2c4        = (0x0800) | RCC_APB4ENR_I2C4EN_Pos,
+        lptim2      = (0x0800) | RCC_APB4ENR_LPTIM2EN_Pos,
+        lptim3      = (0x0800) | RCC_APB4ENR_LPTIM3EN_Pos,
+        lptim4      = (0x0800) | RCC_APB4ENR_LPTIM4EN_Pos,
+        lptim5      = (0x0800) | RCC_APB4ENR_LPTIM5EN_Pos,
+        comp12      = (0x0800) | RCC_APB4ENR_COMP12EN_Pos,
+        vrefbuf     = (0x0800) | RCC_APB4ENR_VREFEN_Pos,
+        rtcapb      = (0x0800) | RCC_APB4ENR_RTCAPBEN_Pos,
+        sai4        = (0x0800) | RCC_APB4ENR_SAI4EN_Pos
+    };
+    
+    template <typename ...Args>
+    constexpr void enablePeripherals(Args... peripherals) {
+        (enablePeripheral(peripherals),...);
+    }
+
+    constexpr void enablePeripheral(peripheral peripheral) {
+        std::uint8_t regOffset_ = peripheralRegisterMap_[static_cast<std::uint16_t>(peripheral) >> 8];
+        (*reinterpret_cast<std::uint32_t *>(RCC_BASE + regOffset_)) |= (0b1 << (static_cast<std::uint16_t>(peripheral) & 0xFF));
+    } 
+
     namespace domain {
 
         enum class d1cpre : uint8_t {
