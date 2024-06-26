@@ -130,7 +130,7 @@ namespace clock{
     
     template <typename ...Args>
     constexpr void enablePeripherals(Args... peripherals) {
-        (enablePeripheral(peripherals),...);
+        (enablePeripheral(peripherals), ...);
     }
 
     constexpr void enablePeripheral(peripheral peripheral) {
