@@ -30,7 +30,7 @@
 #include <type_traits>
 #include <cstdint>
 
-namespace stmcpp::units{
+namespace stmcpp::units {
 
 	template<typename StorageType, typename ConcreteType>
 	struct Unit {
@@ -96,7 +96,6 @@ namespace stmcpp::units{
         constexpr friend bool operator!=    (ConcreteType lhs, ConcreteType rhs) { return lhs.raw_ != rhs.raw_; }
         constexpr friend bool operator>=    (ConcreteType lhs, ConcreteType rhs) { return lhs.raw_ >= rhs.raw_; }
         constexpr friend bool operator<=    (ConcreteType lhs, ConcreteType rhs) { return lhs.raw_ <= rhs.raw_; }
-
 	};
 
     /*
