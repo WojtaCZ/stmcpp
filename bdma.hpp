@@ -1,12 +1,31 @@
-#ifndef BDMA_H
-#define BDMA_H
+/* 
+ * This file is part of the stmcpp distribution (https://github.com/WojtaCZ/stm-cpp).
+ * Copyright (c) 2024 Vojtech Vosahlo.
+ * 
+ * This program is free software: you can redistribute it and/or modify  
+ * it under the terms of the GNU General Public License as published by  
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but 
+ * WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License 
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef STMCPP_BDMA_H
+#define STMCPP_BDMA_H
 
 #include <cstdint>
 #include <cstddef>
 #include "register.hpp"
 #include "stm32h753xx.h"
 
-namespace bdma{
+namespace stmcpp::bdma{
+    using namespace stmcpp;
+
     enum class peripheral : std::uint32_t {
         dma1 = BDMA_BASE
     };
@@ -26,7 +45,7 @@ namespace bdma{
         low = 0b00,
         medium = 0b01,
         high = 0b10,
-        veryhigh = 0b11
+        veryHigh = 0b11
     };
 
     enum class mode : std::uint8_t {
@@ -35,23 +54,23 @@ namespace bdma{
         mem2mem = 0b10,
     };
 
-    enum class datasize : std::uint8_t {
+    enum class dataSize : std::uint8_t {
         byte = 0b00,
-        halfword = 0b01,
+        halfWord = 0b01,
         word = 0b10
     };
 
-    enum class pincoffset : std::uint8_t {
+    enum class pincOffset : std::uint8_t {
         psize = 0b0,
         word = 0b1,
     };
 
-    enum class targetmem : std::uint8_t {
+    enum class targetMem : std::uint8_t {
         mem0 = 0b0,
         mem1 = 0b1,
     };
 
-    enum class interrupt : std::uint8_t{
+    enum class interrupt : std::uint8_t {
         global                  = 0x01, 
         transferComplete        = 0x02,
         transferHalfComplete    = 0x04,
@@ -60,14 +79,14 @@ namespace bdma{
 
 
     template<peripheral Peripheral, channel Channel>
-    class bdma{
+    class bdma {
         private:
             BDMA_Channel_TypeDef * const channelHandle_ = reinterpret_cast<DMA_Stream_TypeDef *>(static_cast<std::uint32_t>(Peripheral) + static_cast<std::uint32_t>(Channel));
             BDMA_TypeDef * const bdmaHandle_ = reinterpret_cast<DMA_TypeDef *>(static_cast<std::uint32_t>(Peripheral));
         public:
-            bdma(mode mode, datasize psize, bool pincrement, std::uint32_t paddress, datasize msize, bool mincrement, uint32_t m0address, uint32_t m1address, uint16_t numofdata,
-                 priority priority = priority::low, bool circular = false, pincoffset pincoffset = pincoffset::psize, bool doublebuffer = false>
-            ){
+            bdma(mode mode, dataSize psize, bool pincrement, std::uint32_t paddress, dataSize msize, bool mincrement, uint32_t m0address, uint32_t m1address, uint16_t numofdata,
+                 priority priority = priority::low, bool circular = false, pincOffset pincOffset = pincOffset::psize, bool doublebuffer = false>
+                ) {
                 reg::write(std::ref(channelHandle_->CCR),
                     //Interrupts are not enabled here and the channel is not yet being enabled
                     ((static_cast<uint8_t>(mode) & 0b01) << BDMA_CCR_DIR_Pos) |
@@ -81,109 +100,105 @@ namespace bdma{
                     ((static_cast<uint8_t>(doublebuffer) & 0b1) << BDMA_CCR_DBM_Pos) 
                     //Current target is not set here
                 );
+
                 reg::write(std::ref(channelHandle_->CPAR), paddress);
                 reg::write(std::ref(channelHandle_->CM0AR), m0address);
                 reg::write(std::ref(channelHandle_->CM1AR), m1address);
                 reg::write(std::ref(channelHandle_->CNDTR), numofdata);
             }
 
-            void enable(){
+            void enable() const {
                 reg::set(std::ref(channelHandle_->CCR), BDMA_CCR_EN);
             }
 
-            void disable(){
+            void disable() const {
                 reg::clear(std::ref(channelHandle_->CCR), BDMA_CCR_EN);
             }
 
-            void setTargetMemory(targetmem memory){
+            void setTargetMemory(targetMem memory) const {
                 reg::change(std::ref(channelHandle_->CCR), 0x01, static_cast<std::uint8_t>(memory), BDMA_CCR_CT_Pos);
             }
 
-            void enableInterrupt(std::vector<interrupt> interrupts){
+            void enableInterrupt(std::vector<interrupt> interrupts) const {
 
                 std::uint8_t mask_ = 0;
 
-                for(auto i : interrupts){
+                for (auto i : interrupts) {
                     //Merge the interrupts into single mask
-                    switch(i){
-                    case interrupt::transferHalfComplete:
-                        mask_ |= BDMA_CCR_HTIE;
-                        break;
-                    case interrupt::transferComplete:
-                        mask_ |= BDMA_CCR_TCIE;
-                        break;
-                    case interrupt::transferError:
-                        mask_ |= BDMA_CCR_TEIE;
-
-                        
-                    default:
-                        break;
+                    switch (i) {
+                        case interrupt::transferHalfComplete:
+                            mask_ |= BDMA_CCR_HTIE;
+                            break;
+                        case interrupt::transferComplete:
+                            mask_ |= BDMA_CCR_TCIE;
+                            break;
+                        case interrupt::transferError:
+                            mask_ |= BDMA_CCR_TEIE;
+                        default:
+                            break;
                     }
-                    
                 }
                 
                 //Apply the mask to the control register
                 reg::set(std::ref(channelHandle_->CCR), mask_);
             }
 
-            void enableInterrupt(interrupt interrupt){
-                switch(interrupt){
-                case interrupt::transferHalfComplete:
-                    reg::set(std::ref(channelHandle_->CCR), BDMA_CCR_HTIE);
-                    break;
-                case interrupt::transferComplete:
-                    reg::set(std::ref(channelHandle_->CCR), BDMA_CCR_TCIE);
-                    break;
-                case interrupt::transferError:
-                    reg::set(std::ref(channelHandle_->CCR), BDMA_CCR_TEIE); 
-                default:
-                    break;
+            void enableInterrupt(interrupt interrupt) const {
+                switch (interrupt) {
+                    case interrupt::transferHalfComplete:
+                        reg::set(std::ref(channelHandle_->CCR), BDMA_CCR_HTIE);
+                        break;
+                    case interrupt::transferComplete:
+                        reg::set(std::ref(channelHandle_->CCR), BDMA_CCR_TCIE);
+                        break;
+                    case interrupt::transferError:
+                        reg::set(std::ref(channelHandle_->CCR), BDMA_CCR_TEIE); 
+                    default:
+                        break;
                 }
             }
 
-            void disableInterrupt(std::vector<interrupt> interrupts){
+            void disableInterrupt(std::vector<interrupt> interrupts) const {
 
                 std::uint8_t mask_ = 0;
 
-                for(auto i : interrupts){
+                for (auto i : interrupts) {
                     //Merge the interrupts into single mask
-                    switch(i){
-                    case interrupt::transferHalfComplete:
-                        mask_ |= BDMA_CCR_HTIE;
-                        break;
-                    case interrupt::transferComplete:
-                        mask_ |= BDMA_CCR_TCIE;
-                        break;
-                    case interrupt::transferError:
-                        mask_ |= BDMA_CCR_TEIE;
-
-                    default:
-                        break;
-                    }
-                    
+                    switch (i) {
+                        case interrupt::transferHalfComplete:
+                            mask_ |= BDMA_CCR_HTIE;
+                            break;
+                        case interrupt::transferComplete:
+                            mask_ |= BDMA_CCR_TCIE;
+                            break;
+                        case interrupt::transferError:
+                            mask_ |= BDMA_CCR_TEIE;
+                        default:
+                            break;
+                    }   
                 }
                 
                 //Apply the mask to the control register
                 reg::set(std::ref(channelHandle_->CCR), mask_);
             }
 
-            void disableInterrupt(interrupt interrupt){
-                switch(interrupt){
-                case interrupt::transferHalfComplete:
-                    reg::clear(std::ref(channelHandle_->CCR), BDMA_CCR_HTIE);
-                    break;
-                case interrupt::transferComplete:
-                    reg::clear(std::ref(channelHandle_->CCR), BDMA_CCR_TCIE);
-                    break;
-                case interrupt::transferError:
-                    reg::clear(std::ref(channelHandle_->CCR), BDMA_CCR_TEIE); 
-                default:
-                    break;
+            void disableInterrupt(interrupt interrupt) const {
+                switch (interrupt) {
+                    case interrupt::transferHalfComplete:
+                        reg::clear(std::ref(channelHandle_->CCR), BDMA_CCR_HTIE);
+                        break;
+                    case interrupt::transferComplete:
+                        reg::clear(std::ref(channelHandle_->CCR), BDMA_CCR_TCIE);
+                        break;
+                    case interrupt::transferError:
+                        reg::clear(std::ref(channelHandle_->CCR), BDMA_CCR_TEIE); 
+                    default:
+                        break;
                 }
             }
 
-            void clearInterruptFlag(interrupt interrupt){
-                switch (Channel){
+            void clearInterruptFlag(interrupt interrupt) const {
+                switch (Channel) {
                     case channel::channel0:
                         reg::set(std::ref(bdmaHandle_->IFCR), interrupt, 0);
                     case channel::channel1:
@@ -200,14 +215,13 @@ namespace bdma{
                         reg::set(std::ref(bdmaHandle_->IFCR), interrupt, 24);
                     case channel::channel7:
                         reg::set(std::ref(bdmaHandle_->IFCR), interrupt, 28);
-                    
                     default:
                         break;
                 }
             }
 
-            bool getInterruptFlag(interrupt interrupt){
-                switch (Channel){
+            bool getInterruptFlag(interrupt interrupt) const {
+                switch (Channel) {
                     case channel::channel0:
                         return static_cast<bool>(reg::set(std::ref(bdmaHandle_->ISR), interrupt, 0));
                     case channel::channel1:
@@ -224,14 +238,11 @@ namespace bdma{
                         return static_cast<bool>(reg::set(std::ref(bdmaHandle_->ISR), interrupt, 24));
                     case channel::channel7:
                         return static_cast<bool>(reg::set(std::ref(bdmaHandle_->ISR), interrupt, 28));
-                    
                     default:
                         break;
                 }
             }
-
     };
-
 }
 
 

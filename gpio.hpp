@@ -1,5 +1,22 @@
-#ifndef GPIO_H
-#define GPIO_H
+/* 
+ * This file is part of the stmcpp distribution (https://github.com/WojtaCZ/stm-cpp).
+ * Copyright (c) 2024 Vojtech Vosahlo.
+ * 
+ * This program is free software: you can redistribute it and/or modify  
+ * it under the terms of the GNU General Public License as published by  
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but 
+ * WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License 
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef STMCPP_GPIO_H
+#define STMCPP_GPIO_H
 
 #include <cstdint>
 #include <cstddef>
@@ -7,7 +24,9 @@
 
 #include "register.hpp"
 
-namespace gpio{
+namespace stmcpp::gpio{
+    using namespace stmcpp;
+       
     enum class port : std::uintptr_t {
         porta = GPIOA_BASE,
         portb = GPIOB_BASE,
@@ -47,7 +66,7 @@ namespace gpio{
         #endif
     };
 
-    enum class mode : std::uint8_t{
+    enum class mode : std::uint8_t {
         input     = 0b00000000,
         output    = 0b00000001,
         af0       = 0b00000010,
@@ -69,22 +88,22 @@ namespace gpio{
         analog    = 0b00000011
     };
 
-    enum class speed : std::uint8_t{
+    enum class speed : std::uint8_t {
         low       = 0b00,
         medium    = 0b01,
         high      = 0b10,
-        veryhigh  = 0b11
+        veryHigh  = 0b11
     };
 
-    enum class pull : std::uint8_t{
-        nopull    = 0b00,
-        pullup    = 0b01,
-        pulldown  = 0b10
+    enum class pull : std::uint8_t {
+        noPull    = 0b00,
+        pullUp    = 0b01,
+        pullDown  = 0b10
     };
 
     enum class otype : std::uint8_t {
-        pushpull  = 0b0,
-        opendrain = 0b1
+        pushPull  = 0b0,
+        openDrain = 0b1
     };
 
     namespace interrupt {
@@ -95,14 +114,13 @@ namespace gpio{
         };
     }
 
-
     template<gpio::port Port, std::uint8_t Pin>
-    class pin{
+    class pin {
         private:
             GPIO_TypeDef * const gpioHandle_ = reinterpret_cast<GPIO_TypeDef *>(Port);
 
         public:
-            constexpr pin(gpio::mode mode = gpio::mode::input, gpio::otype otype = gpio::otype::pushpull, gpio::pull pull = gpio::pull::nopull, gpio::speed speed = gpio::speed::low) {
+            constexpr pin(gpio::mode mode = gpio::mode::input, gpio::otype otype = gpio::otype::pushPull, gpio::pull pull = gpio::pull::noPull, gpio::speed speed = gpio::speed::low) {
                 static_assert(Pin < 16, "The pin number cannot be greater than 15!");
                
                 setMode(mode);
@@ -135,8 +153,8 @@ namespace gpio{
             void setMode(gpio::mode mode) const {
                 reg::change(std::ref(gpioHandle_->MODER), 0x03, static_cast<std::uint8_t>(mode), Pin * 2);
 
-                constexpr auto afrIndex_ = (Pin < 8) ? 0 : 1; 
-                constexpr auto afrShift_ = (Pin % 8) * 4;
+                static constexpr auto afrIndex_ = (Pin < 8) ? 0 : 1; 
+                static constexpr auto afrShift_ = (Pin % 8) * 4;
                 //Upper half of the mode byte holds the AF information
                 reg::change(std::ref(gpioHandle_->AFR[afrIndex_]), 0x0F, static_cast<std::uint8_t>(mode) >> 4, afrShift_);
             }
@@ -155,9 +173,9 @@ namespace gpio{
 
             void enableInterrupt(gpio::interrupt::edge edge) const {
                 
-                constexpr auto extiIndex_ = static_cast<unsigned int>(Pin / 4);
-                constexpr auto extiShift_ = (Pin % 4) * 4;
-                constexpr auto extiPort_ = (static_cast<uint32_t>(Port) - GPIOA_BASE) / 0x0400UL;
+                static constexpr auto extiIndex_ = static_cast<unsigned int>(Pin / 4);
+                static constexpr auto extiShift_ = (Pin % 4) * 4;
+                static constexpr auto extiPort_ = (static_cast<uint32_t>(Port) - GPIOA_BASE) / 0x0400UL;
 
                 reg::change(std::ref(SYSCFG->EXTICR[extiIndex_]), 0x0F, extiPort_, extiShift_);
 
@@ -177,11 +195,11 @@ namespace gpio{
             }
 
             void setInterruptEdge(gpio::interrupt::edge edge) const {
-                if(edge == gpio::interrupt::edge::rising){
+                if (edge == gpio::interrupt::edge::rising) {
                     reg::change(std::ref(EXTI->RTSR1), 0x01, 0x01, Pin);
-                }else if(edge == gpio::interrupt::edge::falling){
+                } else if (edge == gpio::interrupt::edge::falling) {
                     reg::change(std::ref(EXTI->FTSR1), 0x01, 0x01, Pin);
-                }else if(edge == gpio::interrupt::edge::both){
+                } else if (edge == gpio::interrupt::edge::both) {
                     reg::change(std::ref(EXTI->RTSR1), 0x01, 0x01, Pin);
                     reg::change(std::ref(EXTI->FTSR1), 0x01, 0x01, Pin);
                 }

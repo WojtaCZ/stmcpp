@@ -1,12 +1,31 @@
-#ifndef DMAMUX_H
-#define DMAMUX_H
+/* 
+ * This file is part of the stmcpp distribution (https://github.com/WojtaCZ/stm-cpp).
+ * Copyright (c) 2024 Vojtech Vosahlo.
+ * 
+ * This program is free software: you can redistribute it and/or modify  
+ * it under the terms of the GNU General Public License as published by  
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but 
+ * WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License 
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef STMCPP_DMAMUX_H
+#define STMCPP_DMAMUX_H
 
 #include <cstdint>
 #include <cstddef>
 #include "register.hpp"
 #include "stm32h753xx.h"
 
-namespace dmamux1{
+namespace stmcpp::dmamux1 {
+    using namespace stmcpp;
+    
     enum class channel : std::uint32_t {
         channel0    = 0x000UL,
         channel1    = 0x004UL,
@@ -23,10 +42,10 @@ namespace dmamux1{
         channel12   = 0x030UL,
         channel13   = 0x034UL,
         channel14   = 0x038UL,
-        channel15   = 0x03CUL,
+        channel15   = 0x03CUL
     };  
 
-    enum class request : std::uint8_t{
+    enum class request : std::uint8_t {
         dmamux1_req_gen0    = 1,
         dmamux1_req_gen1    = 2,
         dmamux1_req_gen2    = 3,
@@ -144,7 +163,7 @@ namespace dmamux1{
         adc3_dma            = 115
     };
     
-    enum class trigger : std::uint8_t{
+    enum class trigger : std::uint8_t {
         dmamux1_evt0        = 0,
         dmamux1_evt1        = 1,
         dmamux1_evt2        = 2,
@@ -155,7 +174,7 @@ namespace dmamux1{
         tim12_trgo          = 7
     };
 
-    enum class sync : std::uint8_t{
+    enum class sync : std::uint8_t {
         dmamux1_evt0        = 0,
         dmamux1_evt1        = 1,
         dmamux1_evt2        = 2,
@@ -166,14 +185,14 @@ namespace dmamux1{
         tim12_trgo          = 7
     };
 
-    enum class polarity : std::uint8_t{
+    enum class polarity : std::uint8_t {
         noevent     = 0b00,
         rising      = 0b01,
         falling     = 0b10,
         both        = 0b11
     };
 
-    enum class generator : std::uint32_t{
+    enum class generator : std::uint32_t {
        gen0 = 0x100UL,
        gen1 = 0x104UL,
        gen2 = 0x108UL,
@@ -181,11 +200,11 @@ namespace dmamux1{
        gen4 = 0x110UL,
        gen5 = 0x114UL,
        gen6 = 0x118UL,
-       gen7 = 0x11CUL,
+       gen7 = 0x11CUL
     };
 
     template<channel Channel>
-    class dmamux{
+    class dmamux {
         private:
             DMAMUX_Channel_TypeDef * const channelHandle_ = reinterpret_cast<DMAMUX_Channel_TypeDef *>(static_cast<std::uint32_t>(DMAMUX1_BASE) + static_cast<std::uint32_t>(Channel));
             DMAMUX_ChannelStatus_TypeDef * const channelStatusHandle_ = reinterpret_cast<DMAMUX_ChannelStatus_TypeDef *>(static_cast<std::uint32_t>(DMAMUX1_ChannelStatus_BASE));
@@ -195,7 +214,7 @@ namespace dmamux1{
             }
 
         public:
-            dmamux(request request, std::uint8_t numreq = 1, bool syncenable = false, sync sync = sync::dmamux1_evt0, polarity polarity = polarity::noevent, bool eventenable = false, bool intenable = false){
+            dmamux(request request, std::uint8_t numreq = 1, bool syncenable = false, sync sync = sync::dmamux1_evt0, polarity polarity = polarity::noevent, bool eventenable = false, bool intenable = false) {
                 //Write the channel configuration
                 reg::write(std::ref(channelHandle_->CCR),
                     ((static_cast<std::uint8_t>(request) & 0b01111111) << DMAMUX_CxCR_DMAREQ_ID_Pos) |
@@ -208,49 +227,49 @@ namespace dmamux1{
                 );
             }
 
-            void setNumReq(uint8_t number){
+            void setNumReq(uint8_t number) const {
                 reg::change(std::ref(channelHandle_->CCR), 0x1F, (static_cast<std::uint8_t>(number) - 1), DMAMUX_CxCR_NBREQ_Pos);
             }
 
-            void enableSync(){
+            void enableSync() const {
                 reg::set(std::ref(channelHandle_->CCR), DMAMUX_CxCR_SE);
             }
 
-            void disableSync(){
+            void disableSync() const {
                 reg::clear(std::ref(channelHandle_->CCR), DMAMUX_CxCR_SE);
             }
 
-            void setPolarity(polarity polarity){
+            void setPolarity(polarity polarity) const {
                 reg::change(std::ref(channelHandle_->CCR), 0x03, static_cast<std::uint8_t>(polarity), DMAMUX_CxCR_SPOL_Pos);
             }
 
-            void enableEvent(){
+            void enableEvent() const {
                 reg::set(std::ref(channelHandle_->CCR), DMAMUX_CxCR_EGE);
             }
 
-            void disableEvent(){
+            void disableEvent() const {
                 reg::clear(std::ref(channelHandle_->CCR), DMAMUX_CxCR_EGE);
             }
 
-            void enableInterrupt(){
+            void enableInterrupt() const {
                 reg::set(std::ref(channelHandle_->CCR), DMAMUX_CxCR_SOIE);
             }
 
-            void disableInterrupt(){
+            void disableInterrupt() const {
                 reg::clear(std::ref(channelHandle_->CCR), DMAMUX_CxCR_SOIE);
             }
 
-            bool getInterruptFlag(){
+            bool getInterruptFlag() const {
                 return static_cast<bool>(reg::read(std::ref(channelStatusHandle_->CSR), 0b1 << getChannelIdx_()));
             }
 
-            void clearInterruptFlag(){
+            void clearInterruptFlag() const {
                 reg::write(std::ref(channelStatusHandle_->CSR), 0b1 << getChannelIdx_());
             }
         };
 
         template<generator Generator>
-        class reqgen{
+        class reqgen {
             private:
                 DMAMUX_RequestGen_TypeDef * const reqgenHandle_ = reinterpret_cast<DMAMUX_RequestGen_TypeDef *>(static_cast<std::uint32_t>(DMAMUX1_BASE) + static_cast<std::uint32_t>(Generator));
                 DMAMUX_RequestGenStatus_TypeDef * const reqgenStatusHandle_ = reinterpret_cast<DMAMUX_RequestGenStatus_TypeDef *>(static_cast<std::uint32_t>(DMAMUX1_RequestGenStatus_BASE));
@@ -260,7 +279,7 @@ namespace dmamux1{
                 }
 
             public:
-                reqgen(trigger trigger, polarity polarity, std::uint8_t numreq = 1, bool intenable = false){                   
+                reqgen(trigger trigger, polarity polarity, std::uint8_t numreq = 1, bool intenable = false) {                   
                     //Write the channel configuration
                     reg::write(std::ref(reqgenHandle_->RGCR), 
                         ((static_cast<std::uint8_t>(trigger) & 0b111) << DMAMUX_RGxCR_SIG_ID_Pos) |
@@ -271,34 +290,33 @@ namespace dmamux1{
                     );
                 }
 
-                void enable(){
+                void enable() const {
                     reg::set(std::ref(reqgenHandle_->RGCR), DMAMUX_RGxCR_GE);
                 }
 
-                void disable(){
+                void disable() const {
                     reg::clear(std::ref(reqgenHandle_->RGCR), DMAMUX_RGxCR_GE);
                 }
 
-                void enableInterrupt(){
+                void enableInterrupt() const {
                     reg::set(std::ref(reqgenHandle_->RGCR), DMAMUX_RGxCR_OIE);
                 }
 
-                void disableInterrupt(){
+                void disableInterrupt() const {
                     reg::clear(std::ref(reqgenHandle_->RGCR), DMAMUX_RGxCR_OIE);
                 }
 
-                bool getInterruptFlag(){
+                bool getInterruptFlag() const {
                     return static_cast<bool>(reg::read(std::ref(reqgenStatusHandle_->RGSR), 0b1 << getGenIdx_()));
                 }
 
-                void clearInterruptFlag(){
+                void clearInterruptFlag() const {
                     reg::write(std::ref(reqgenStatusHandle_->RGCFR), 0b1 << getGenIdx_());
                 }
     };
-
 }
 
-namespace dmamux2{
+namespace stmcpp::dmamux2 {
 
     enum class channel : std::uint32_t {
         channel0    = 0x000UL,
@@ -308,7 +326,7 @@ namespace dmamux2{
         channel4    = 0x010UL,
         channel5    = 0x014UL,
         channel6    = 0x018UL,
-        channel7    = 0x01CUL,
+        channel7    = 0x01CUL
     };  
 
     enum class request : std::uint8_t {
@@ -380,7 +398,7 @@ namespace dmamux2{
         comp1_out           = 12,
         rtc_wkup            = 13,
         syscfg_exti0_mux    = 14,
-        syscfg_exti2_mux    = 15,
+        syscfg_exti2_mux    = 15
     };
 
     enum class polarity : std::uint8_t {
@@ -398,11 +416,11 @@ namespace dmamux2{
        gen4 = 0x110UL,
        gen5 = 0x114UL,
        gen6 = 0x118UL,
-       gen7 = 0x11CUL,
+       gen7 = 0x11CUL
     };
 
     template<channel Channel>
-    class dmamux{
+    class dmamux {
         private:
             DMAMUX_Channel_TypeDef * const channelHandle_ = reinterpret_cast<DMAMUX_Channel_TypeDef *>(static_cast<uint32_t>(DMAMUX1_BASE) + static_cast<std::uint32_t>(Channel));
             DMAMUX_ChannelStatus_TypeDef * const channelStatusHandle_ = reinterpret_cast<DMAMUX_ChannelStatus_TypeDef *>(static_cast<std::uint32_t>(DMAMUX1_ChannelStatus_BASE));
@@ -412,7 +430,7 @@ namespace dmamux2{
             }
             
         public:
-            dmamux(request request, std::uint8_t numreq = 1, bool syncenable = false, sync sync = sync::dmamux2_evt0, polarity polarity = polarity::noevent, bool eventenable = false, bool intenable = false){
+            dmamux(request request, std::uint8_t numreq = 1, bool syncenable = false, sync sync = sync::dmamux2_evt0, polarity polarity = polarity::noevent, bool eventenable = false, bool intenable = false) {
                 //Write the channel configuration
                 reg::write(std::ref(channelHandle_->CCR),
                     ((static_cast<std::uint8_t>(request) & 0b01111111) << DMAMUX_CxCR_DMAREQ_ID_Pos) |
@@ -425,43 +443,43 @@ namespace dmamux2{
                 );
             }
 
-            void setNumReq(std::uint8_t number){
+            void setNumReq(std::uint8_t number) const {
                 reg::change(std::ref(channelHandle_->CCR), 0x1F, (static_cast<std::uint8_t>(number) - 1), DMAMUX_CxCR_NBREQ_Pos);
             }
 
-            void enableSync(){
+            void enableSync() const {
                 reg::set(std::ref(channelHandle_->CCR), DMAMUX_CxCR_SE);
             }
 
-            void disableSync(){
+            void disableSync() const {
                 reg::clear(std::ref(channelHandle_->CCR), DMAMUX_CxCR_SE);
             }
 
-            void setPolarity(polarity polarity){
+            void setPolarity(polarity polarity) const {
                 reg::change(std::ref(channelHandle_->CCR), 0x03, static_cast<std::uint8_t>(polarity), DMAMUX_CxCR_SPOL_Pos);
             }
 
-            void enableEvent(){
+            void enableEvent() const {
                 reg::set(std::ref(channelHandle_->CCR), DMAMUX_CxCR_EGE);
             }
 
-            void disableEvent(){
+            void disableEvent() const {
                 reg::clear(std::ref(channelHandle_->CCR), DMAMUX_CxCR_EGE);
             }
 
-            void enableInterrupt(){
+            void enableInterrupt() const {
                 reg::set(std::ref(channelHandle_->CCR), DMAMUX_CxCR_SOIE);
             }
 
-            void disableInterrupt(){
+            void disableInterrupt() const {
                 reg::clear(std::ref(channelHandle_->CCR), DMAMUX_CxCR_SOIE);
             }
 
-            bool getInterruptFlag(){
+            bool getInterruptFlag() const {
                 return static_cast<bool>(reg::read(std::ref(channelStatusHandle_->CSR), 0b1 << getChannelIdx_()));
             }
 
-            void clearInterruptFlag(){
+            void clearInterruptFlag() const {
                 reg::write(std::ref(channelStatusHandle_->CSR), 0b1 << getChannelIdx_());
             }
     };
@@ -488,31 +506,30 @@ namespace dmamux2{
                     );
                 }
 
-                void enable(){
+                void enable() const {
                     reg::set(std::ref(reqgenHandle_->RGCR), DMAMUX_RGxCR_GE);
                 }
 
-                void disable(){
+                void disable() const {
                     reg::clear(std::ref(reqgenHandle_->RGCR), DMAMUX_RGxCR_GE);
                 }
 
-                void enableInterrupt(){
+                void enableInterrupt() const {
                     reg::set(std::ref(reqgenHandle_->RGCR), DMAMUX_RGxCR_OIE);
                 }
 
-                void disableInterrupt(){
+                void disableInterrupt() const {
                     reg::clear(std::ref(reqgenHandle_->RGCR), DMAMUX_RGxCR_OIE);
                 }
 
-                bool getInterruptFlag(){
+                bool getInterruptFlag() const {
                     return static_cast<bool>(reg::read(std::ref(reqgenStatusHandle_->RGSR), 0b1 << getGenIdx_()));
                 }
 
-                void clearInterruptFlag(){
+                void clearInterruptFlag() const {
                     reg::write(std::ref(reqgenStatusHandle_->RGCFR), 0b1 << getGenIdx_());
                 }
     };
-
 }
 
 

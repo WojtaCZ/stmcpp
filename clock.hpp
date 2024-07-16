@@ -1,5 +1,22 @@
-#ifndef CLOCK_H
-#define CLOCK_H
+/* 
+ * This file is part of the stmcpp distribution (https://github.com/WojtaCZ/stm-cpp).
+ * Copyright (c) 2024 Vojtech Vosahlo.
+ * 
+ * This program is free software: you can redistribute it and/or modify  
+ * it under the terms of the GNU General Public License as published by  
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but 
+ * WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License 
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef STMCPP_CLOCK_H
+#define STMCPP_CLOCK_H
 
 #include <cstdint>
 #include <tuple>
@@ -7,17 +24,12 @@
 
 #include "register.hpp"
 #include "stm32h753xx.h"
+#include "stmcpp-config.hpp"
 
-#define STM32H7
+extern "C" void SysTick_Handler();
 
-namespace clock{
-    
-    void init();
-
-    constexpr std::array<std::uint8_t, 9> peripheralRegisterMap_ = {
-        offsetof(RCC_TypeDef, AHB3ENR), offsetof(RCC_TypeDef, AHB1ENR), offsetof(RCC_TypeDef, AHB2ENR), offsetof(RCC_TypeDef, AHB4ENR), 
-        offsetof(RCC_TypeDef, APB3ENR), offsetof(RCC_TypeDef, APB1LENR), offsetof(RCC_TypeDef, APB1HENR), offsetof(RCC_TypeDef, APB2ENR), offsetof(RCC_TypeDef, APB4ENR)
-    };    
+namespace stmcpp::clock {
+    using namespace stmcpp;
 
     enum class peripheral : std::uint16_t {
         mdma        = (0x0000) | RCC_AHB3ENR_MDMAEN_Pos,
@@ -128,6 +140,11 @@ namespace clock{
         sai4        = (0x0800) | RCC_APB4ENR_SAI4EN_Pos
     };
     
+    constexpr std::array<std::uint8_t, 9> peripheralRegisterMap_ = {
+        offsetof(RCC_TypeDef, AHB3ENR), offsetof(RCC_TypeDef, AHB1ENR), offsetof(RCC_TypeDef, AHB2ENR), offsetof(RCC_TypeDef, AHB4ENR), 
+        offsetof(RCC_TypeDef, APB3ENR), offsetof(RCC_TypeDef, APB1LENR), offsetof(RCC_TypeDef, APB1HENR), offsetof(RCC_TypeDef, APB2ENR), offsetof(RCC_TypeDef, APB4ENR)
+    };
+
     template <typename ...Args>
     constexpr void enablePeripherals(Args... peripherals) {
         (enablePeripheral(peripherals), ...);
@@ -139,7 +156,6 @@ namespace clock{
     } 
 
     namespace domain {
-
         enum class d1cpre : uint8_t {
             div1    = 0b0000,
             div2    = 0b1000,
@@ -149,7 +165,7 @@ namespace clock{
             div64   = 0b1100,
             div128  = 0b1101,
             div256  = 0b1110,
-            div512  = 0b1111,
+            div512  = 0b1111
         };
 
         enum class d1ppre : uint8_t {
@@ -157,7 +173,7 @@ namespace clock{
             div2    = 0b100,
             div4    = 0b101,
             div8    = 0b110,
-            div16   = 0b111,
+            div16   = 0b111
         };
 
         enum class hpre : uint8_t {
@@ -169,7 +185,7 @@ namespace clock{
             div64   = 0b1100,
             div128  = 0b1101,
             div256  = 0b1110,
-            div512  = 0b1111,
+            div512  = 0b1111
         };
 
         enum class d2ppre1 : uint8_t {
@@ -177,7 +193,7 @@ namespace clock{
             div2    = 0b100,
             div4    = 0b101,
             div8    = 0b110,
-            div16   = 0b111,
+            div16   = 0b111
         };
 
         enum class d2ppre2 : uint8_t {
@@ -185,7 +201,7 @@ namespace clock{
             div2    = 0b100,
             div4    = 0b101,
             div8    = 0b110,
-            div16   = 0b111,
+            div16   = 0b111
         };
 
         enum class d3ppre : uint8_t {
@@ -193,7 +209,7 @@ namespace clock{
             div2    = 0b100,
             div4    = 0b101,
             div8    = 0b110,
-            div16   = 0b111,
+            div16   = 0b111
         };
 
         enum class source : uint8_t {
@@ -229,50 +245,34 @@ namespace clock{
     
     }
 
-    namespace pll{
-
-        #ifdef STM32H7
-            //Ranges for divisor values
-            constexpr std::pair<unsigned int, unsigned int> range_div_m = {1u,  63u};
-            constexpr std::pair<unsigned int, unsigned int> range_div_n = {4u, 512u};
-            constexpr std::pair<unsigned int, unsigned int> range_div_p = {2u, 128u};
-            constexpr std::pair<unsigned int, unsigned int> range_div_q = {1u, 128u};
-            constexpr std::pair<unsigned int, unsigned int> range_div_r = {1u, 128u};
-
-            static_assert(range_div_m.first < range_div_m.second, "Bottom range bound must be smaller than the top one!");
-            static_assert(range_div_n.first < range_div_n.second, "Bottom range bound must be smaller than the top one!");
-            static_assert(range_div_p.first < range_div_p.second, "Bottom range bound must be smaller than the top one!");
-            static_assert(range_div_q.first < range_div_q.second, "Bottom range bound must be smaller than the top one!");
-            static_assert(range_div_r.first < range_div_r.second, "Bottom range bound must be smaller than the top one!");
-
-
-        #endif
-
+    namespace pll {
         enum class peripheral : uint32_t {
             pll1 = offsetof(RCC_TypeDef, PLL1DIVR),
             pll2 = offsetof(RCC_TypeDef, PLL2DIVR),
             pll3 = offsetof(RCC_TypeDef, PLL3DIVR)
         };
 
-        enum class inputrange : uint8_t {
+        enum class inputRange : uint8_t {
             f1_2MHz     = 0b00,
             f2_4MHz     = 0b01,
             f4_8MHz     = 0b10,
             f8_16MHz    = 0b11
         };
 
-        enum class vcorange : uint8_t {
+        enum class vcoRange : uint8_t {
             f192_960MHz     = 0b0,
             f150_420MHz     = 0b1,
         };
 
-        enum class clksource : uint8_t {
+        enum class clkSource : uint8_t {
             hsi,
             csi,
-            hse,
+            hse
         };
 
-        void setSource(pll::clksource source);
+        void setSource(clkSource source) {
+            reg::change(std::ref(RCC->PLLCKSELR), 0x03, static_cast<uint8_t>(source));
+        }
 
         template<peripheral Peripheral, unsigned int M, unsigned int N, unsigned int P, unsigned int Q, unsigned int R, unsigned int Fraction = 0>
         class pll{
@@ -280,8 +280,9 @@ namespace clock{
                 constexpr auto getPllIdx_() const {
                     return ((static_cast<unsigned int>(Peripheral) - offsetof(RCC_TypeDef, PLL1DIVR)) / 8);
                 }
+
             public:
-                constexpr pll(clock::pll::inputrange inputrange = clock::pll::inputrange::f1_2MHz, clock::pll::vcorange vcorange = clock::pll::vcorange::f192_960MHz) {
+                constexpr pll(clock::pll::inputRange inputRange = clock::pll::inputRange::f1_2MHz, clock::pll::vcoRange vcoRange = clock::pll::vcoRange::f192_960MHz) {
                     static_assert(M >= clock::pll::range_div_m.first && M <= clock::pll::range_div_m.second, "The M divider is out of range.");
                     static_assert(N >= clock::pll::range_div_n.first && N <= clock::pll::range_div_n.second, "The N divider is out of range.");
                     static_assert(P >= clock::pll::range_div_p.first && P <= clock::pll::range_div_p.second, "The P divider is out of range.");
@@ -293,7 +294,6 @@ namespace clock{
                     volatile uint32_t * const pllCfgrAdd_ = reinterpret_cast<volatile uint32_t *>(RCC_BASE + static_cast<std::uint32_t>(Peripheral));
                     volatile uint32_t * const  pllFracAdd_ = reinterpret_cast<volatile uint32_t *>(RCC_BASE + static_cast<std::uint32_t>(Peripheral) + 0x004);
 
-
                     reg::change(std::ref(RCC->PLLCKSELR), 0x3F, M, (8 * getPllIdx_()) + 4);
 
                     if constexpr (Fraction > 0){
@@ -303,8 +303,8 @@ namespace clock{
 
                     reg::change(std::ref(RCC->PLLCFGR), 0x0E,
                     (
-                        static_cast<uint8_t>(inputrange) << RCC_PLLCFGR_PLL1RGE_Pos |
-                        static_cast<uint8_t>(vcorange) << RCC_PLLCFGR_PLL1VCOSEL_Pos 
+                        static_cast<uint8_t>(inputRange) << RCC_PLLCFGR_PLL1RGE_Pos |
+                        static_cast<uint8_t>(vcoRange) << RCC_PLLCFGR_PLL1VCOSEL_Pos 
                     ), 4 * getPllIdx_());
 
                     reg::write(std::ref(*pllCfgrAdd_), 
@@ -315,21 +315,58 @@ namespace clock{
                     );
                 };
 
-                void enable() const{
+                void enable() const {
                     reg::set(std::ref(RCC->CR), 0x01, (2 * getPllIdx_()) + RCC_CR_PLL1ON_Pos);
                 }
 
-                void disable() const{
+                void disable() const {
                     reg::set(std::ref(RCC->CR), 0x01, (2 * getPllIdx_()) + RCC_CR_PLL1ON_Pos);
                 }
 
-                bool isLocked() const{
+                bool isLocked() const {
                     return static_cast<bool>(reg::read(std::ref(RCC->CR), 0x01, (2 * getPllIdx_()) + RCC_CR_PLL1RDY_Pos));
                 }
                 
         };    
-       
     }    
+
+    class systick final {
+        private:
+            inline volatile static std::uint32_t ticks_ = 0;
+
+        public:
+            systick() = delete;
+            systick(const systick &) = delete;
+            systick(systick &&) = delete;
+
+            static void init() {
+                constexpr auto reloadVal_ = (static_cast<std::uint32_t>(stmcpp::config::SYSCLK / stmcpp::config::SYSTICK) - 1);
+                static_assert(reloadVal_ > 0, "The reload value has to be bigger than 0! Consider lowering the frequency.");
+                    
+                //Zero out the counter
+                reg::write(std::ref(SysTick->VAL), 0);
+
+                //Load the reload value
+                reg::write(std::ref(SysTick->LOAD), reloadVal_);
+
+                //Start the counter
+                reg::set(std::ref(SysTick->CTRL),
+                        0b1 << SysTick_CTRL_CLKSOURCE_Pos |
+                        0b1 << SysTick_CTRL_TICKINT_Pos |
+                        0b1 << SysTick_CTRL_ENABLE_Pos 
+                );
+            };
+
+            static std::uint32_t getTicks() {
+                return ticks_;
+            }
+
+            static inline void increment() {
+                ++ticks_;
+            } 
+
+            friend void SysTick_Handler();
+    };    
 }
 
 #endif
