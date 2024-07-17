@@ -286,6 +286,12 @@ namespace stmcpp::clock {
 
             public:
                 constexpr pll(clock::pll::inputRange inputRange = clock::pll::inputRange::f1_2MHz, clock::pll::vcoRange vcoRange = clock::pll::vcoRange::f192_960MHz) {
+                    static_assert(range_div_m.first < range_div_m.second, "Bottom range bound must be smaller than the top one!");
+                    static_assert(range_div_n.first < range_div_n.second, "Bottom range bound must be smaller than the top one!");
+                    static_assert(range_div_p.first < range_div_p.second, "Bottom range bound must be smaller than the top one!");
+                    static_assert(range_div_q.first < range_div_q.second, "Bottom range bound must be smaller than the top one!");
+                    static_assert(range_div_r.first < range_div_r.second, "Bottom range bound must be smaller than the top one!");
+
                     static_assert(M >= clock::pll::range_div_m.first && M <= clock::pll::range_div_m.second, "The M divider is out of range.");
                     static_assert(N >= clock::pll::range_div_n.first && N <= clock::pll::range_div_n.second, "The N divider is out of range.");
                     static_assert(P >= clock::pll::range_div_p.first && P <= clock::pll::range_div_p.second, "The P divider is out of range.");

@@ -177,7 +177,7 @@ namespace stmcpp::dma{
                                 break;
                             case dma::interrupt::directModeError:
                                 mask_ |= DMA_SxCR_DMEIE;
-                                break
+                                break;
                             default:
                                 break;
                         }

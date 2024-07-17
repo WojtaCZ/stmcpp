@@ -167,24 +167,28 @@ namespace stmcpp::usart {
         txFree          = USART_ISR_TXE_TXFNF
     };
 
+using namespace stmcpp::units;
     template<usart::peripheral Peripheral>
     class uart {
         private:
             USART_TypeDef * const usartHandle_ = reinterpret_cast<USART_TypeDef *>(static_cast<std::uint32_t>(Peripheral));
 
         public:
-            constexpr uart(units::frequency periphclock, units::baudrate speed, usart::divider divider = usart::divider::nodivide, bool fifomode = false, usart::wordLength wordLength = usart::wordLength::eightbit, usart::overSampling overSampling = usart::overSampling::times16,
-                            usart::parity parity = usart::parity::none, usart::stopBits stopBits = usart::stopBits::one, usart::bitOrder bitOrder = usart::bitOrder::lsbfirst
+            constexpr uart(units::frequency periphclock, usart::divider divider, units::baudrate speed, bool fifomode = false, usart::wordLength wordLength = usart::wordLength::eightBit, usart::overSampling overSampling = usart::overSampling::times16,
+                            usart::parity parity = usart::parity::none, usart::stopBits stopBits = usart::stopBits::one, usart::bitOrder bitOrder = usart::bitOrder::lsbFirst
                           ) {
-
-                constexpr auto multiplier_ = (overSampling == usart::overSampling::times16) ? 1.0 : 2.0;
-                constexpr float floatBaud_ = (multiplier_ * static_cast<double>(periphclock.toHertz())) / static_cast<double>(speed.toBaud());
-                constexpr std::uint32_t rawBaud_;
-
-                // Round the baudrate 
-                if constexpr (floatBaud_ - static_cast<double>(static_cast<uint32_t>(floatBaud_)) > 0.5) {
-                    rawBaud_ = static_cast<uint32_t>(floatBaud_) + 1;
-                }else rawBaud_ = static_cast<uint32_t>(floatBaud_);
+                
+                // Work out the divisor and multiplier value based on the oversampling
+                constexpr std::array dividerLut_ = {1, 2, 4, 6, 8, 10, 12, 16, 32, 64, 128, 256}; 
+                constexpr std::uint32_t dividerValue_ = dividerLut_.at(static_cast<std::uint8_t>(divider));
+                constexpr std::array multiplierLut_ = {1.0f, 2.0f}; 
+                constexpr double multiplier_ = multiplierLut_.at(static_cast<std::uint8_t>(overSampling));
+                
+                // Calculate the baud rate and than round it to get the raw value
+                constexpr int rawBaud_ = (10 * multiplier_ * (periphclock.toHertz() / dividerValue_)) / speed.toBaud();
+                if (rawBaud_ - (rawBaud_ / 10) >= 5) {
+                    rawBaud_ = (rawBaud_ / 10) + 1;
+                }else rawBaud_ = (rawBaud_ / 10);
 
                 reg::write(std::ref(usartHandle_->CR1),
                     ((static_cast<uint8_t>(fifomode) & 0b1) << USART_CR1_FIFOEN_Pos) |
@@ -315,8 +319,8 @@ namespace stmcpp::usart {
             }
 
             bool getInterruptFlag(usart::interrupt interrupt) const {
-                if (interrupt == usart::interrupt::txbeforeguard) return static_cast<bool>(reg::read(std::ref(usartHandle_->ISR), USART_ISR_TCBGT)); 
-                if (interrupt == usart::interrupt::txempty) return static_cast<bool>(reg::read(std::ref(usartHandle_->ISR), USART_ISR_TXFE)); 
+                if (interrupt == usart::interrupt::txBeforeGuard) return static_cast<bool>(reg::read(std::ref(usartHandle_->ISR), USART_ISR_TCBGT)); 
+                if (interrupt == usart::interrupt::txEmpty) return static_cast<bool>(reg::read(std::ref(usartHandle_->ISR), USART_ISR_TXFE)); 
 
                 return static_cast<bool>(reg::read(std::ref(usartHandle_->ISR), static_cast<uint32_t>(interrupt)));
             }
