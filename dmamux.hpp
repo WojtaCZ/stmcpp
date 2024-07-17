@@ -20,7 +20,7 @@
 
 #include <cstdint>
 #include <cstddef>
-#include "register.hpp"
+#include <stmcpp/register.hpp>
 #include "stm32h753xx.h"
 
 namespace stmcpp::dmamux1 {

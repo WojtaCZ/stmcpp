@@ -22,7 +22,7 @@
 #include <cstddef>
 #include "stm32h753xx.h"
 
-#include "register.hpp"
+#include <stmcpp/register.hpp>
 
 namespace stmcpp::gpio{
     using namespace stmcpp;

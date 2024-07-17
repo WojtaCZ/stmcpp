@@ -22,7 +22,7 @@
 #include <cstddef>
 #include <cmath>
 
-#include "register.hpp"
+#include <stmcpp/register.hpp>
 #include "units.hpp"
 #include "stm32h753xx.h"
 

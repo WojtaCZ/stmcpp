@@ -21,7 +21,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <vector>
-#include "register.hpp"
+#include <stmcpp/register.hpp>
 #include "stm32h753xx.h"
 
 namespace stmcpp::dma{

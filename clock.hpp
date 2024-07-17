@@ -22,8 +22,8 @@
 #include <tuple>
 #include <array>
 
-#include "register.hpp"
-#include "units.hpp"
+#include <stmcpp/register.hpp>
+#include <stmcpp/units.hpp>
 
 #include "stm32h753xx.h"
 #include "stmcpp-config.hpp"
@@ -273,7 +273,7 @@ namespace stmcpp::clock {
             hse
         };
 
-        void setSource(clkSource source) {
+        static void setSource(clkSource source) {
             reg::change(std::ref(RCC->PLLCKSELR), 0x03, static_cast<uint8_t>(source));
         }
 
@@ -338,20 +338,20 @@ namespace stmcpp::clock {
                 
         };    
     }    
-
+    
     class systick final {
         private:
             inline volatile static std::uint32_t ticks_ = 0;
-            inline static units::duration resolution_;
+            static inline duration resolution_ = 1_ms;
         public:
             systick() = delete;
             systick(const systick &) = delete;
             systick(systick &&) = delete;
 
-            static void init(units::duration resolution = 1_ms) {
+            static void init(duration resolution = 1_ms) {
                 resolution_ = resolution;
 
-                auto reloadVal_ = ((config::sysclock.toHertz() / resolution.freq().toHertz()) - 1);
+                auto reloadVal_ = ((config::sysclock.toHertz() / resolution_.freq().toHertz()) - 1);
                     
                 //Zero out the counter
                 reg::write(std::ref(SysTick->VAL), 0);
@@ -371,8 +371,13 @@ namespace stmcpp::clock {
                 return ticks_;
             }
 
-            static units::duration getDuration() {
-                return resolution_ * getTicks();
+            static inline duration getDuration() {
+                return resolution_ * ticks_;
+            }
+
+            static void waitBlocking(duration time) {
+                duration timestamp_ = resolution_ * ticks_;
+                while(getDuration() < (timestamp_ + time)){;}
             }
 
             static inline void increment() {
@@ -381,6 +386,7 @@ namespace stmcpp::clock {
 
             friend void SysTick_Handler();
     };    
+   
 }
 
 #endif

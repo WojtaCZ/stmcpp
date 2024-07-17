@@ -21,7 +21,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <cmath>
-#include "register.hpp"
+#include <stmcpp/register.hpp>
 #include "stm32h753xx.h"
 
 #include <cstdint>
@@ -35,7 +35,7 @@ namespace stmcpp::units {
 	template<typename StorageType, typename ConcreteType>
 	struct unit {
         using StorageType_ = StorageType;
-        StorageType_ raw_;
+        StorageType_ raw_ = 0;
 
         constexpr ConcreteType operator+ (ConcreteType rhs) const { 
             return { static_cast<StorageType_>(raw_ + rhs.raw_) }; 
@@ -113,17 +113,17 @@ namespace stmcpp::units {
 
 	struct voltage : public unit<voltageStorage_, voltage> {
 		template<typename T>
-		constexpr static voltage fromVolts(T volts) {
+		static constexpr voltage fromVolts(T volts) {
             return { static_cast<StorageType_>(volts * (1'000'000ll * voltageScaleFactor_)) };
         }
 
         template<typename T>
-		constexpr static voltage fromMilliVolts(T millivolts) {
+		static constexpr voltage fromMilliVolts(T millivolts) {
             return { static_cast<StorageType_>(millivolts * (1'000 * voltageScaleFactor_)) };
         }
 
         template<typename T>
-		constexpr static voltage fromMicroVolts(T microvolts) {
+		static constexpr voltage fromMicroVolts(T microvolts) {
             return { static_cast<StorageType_>(microvolts * voltageScaleFactor_) };
         }
 
@@ -141,17 +141,17 @@ namespace stmcpp::units {
 
         #ifdef STMCPP_UNITS_VOLTAGE_HIGHRANGE
             template<typename T>
-            constexpr static voltage fromKiloVolts(T kilovolts) {
+            static constexpr voltage fromKiloVolts(T kilovolts) {
                 return { static_cast<StorageType_>(kilovolts * (1'000'000'000ll * voltageScaleFactor_)) };
             }
 
             template<typename T>
-            constexpr static voltage fromNanoVolts(T nanovolts) {
+            static constexpr voltage fromNanoVolts(T nanovolts) {
                 return { static_cast<StorageType_>(nanovolts * (voltageScaleFactor_ / 1'000)) };
             }
 
             template<typename T>
-            constexpr static voltage fromPicoVolts(T picovolts) {
+            static constexpr voltage fromPicoVolts(T picovolts) {
                 return { static_cast<StorageType_>(picovolts *  (voltageScaleFactor_ / 1'000'000)) };
             }
 
@@ -199,17 +199,17 @@ namespace stmcpp::units {
 
 	struct current : public unit<currentStorage_, current> {
 		template<typename T>
-		constexpr static current fromAmperes(T amperes) {
+		static constexpr current fromAmperes(T amperes) {
             return { static_cast<StorageType_>(amperes * (1'000'000ll * currentScaleFactor_)) };
         }
 
         template<typename T>
-		constexpr static current fromMilliAmperes(T milliamperes) {
+		static constexpr current fromMilliAmperes(T milliamperes) {
             return { static_cast<StorageType_>(milliamperes * (1'000 * currentScaleFactor_)) };
         }
 
         template<typename T>
-		constexpr static current fromMicroAmperes(T microamperes) {
+		static constexpr current fromMicroAmperes(T microamperes) {
             return { static_cast<StorageType_>(microamperes * currentScaleFactor_) };
         }
 
@@ -227,17 +227,17 @@ namespace stmcpp::units {
 
         #ifdef STMCPP_UNITS_CURRENT_HIGHRANGE
             template<typename T>
-            constexpr static current fromKiloAmperes(T kiloamperes) {
+            static constexpr current fromKiloAmperes(T kiloamperes) {
                 return { static_cast<StorageType_>(kiloamperes * (1'000'000'000ll * currentScaleFactor_)) };
             }
 
             template<typename T>
-            constexpr static current fromNanoAmperes(T nanoamperes) {
+            static constexpr current fromNanoAmperes(T nanoamperes) {
                 return { static_cast<StorageType_>(nanoamperes * (currentScaleFactor_ / 1'000)) };
             }
 
             template<typename T>
-            constexpr static current fromPicoAmperes(T picoamperes) {
+            static constexpr current fromPicoAmperes(T picoamperes) {
                 return { static_cast<StorageType_>(picoamperes *  (currentScaleFactor_ / 1'000'000)) };
             }
 
@@ -286,15 +286,15 @@ namespace stmcpp::units {
     struct frequency;
 
 	struct duration : unit<durationStorage_, duration> {
-        constexpr static duration fromMicroSeconds(unsigned microseconds) {
+        static constexpr duration fromMicroSeconds(unsigned microseconds) {
             return { microseconds * durationScaleFactor_};
         }
 
-		constexpr static duration fromMilliSeconds(unsigned milliseconds) {
+		static constexpr duration fromMilliSeconds(unsigned milliseconds) {
             return { milliseconds * (1'000 * durationScaleFactor_) };
         }
 
-		constexpr static duration fromSeconds(unsigned seconds) {
+		static constexpr duration fromSeconds(unsigned seconds) {
             return { seconds * (1'000'000 * durationScaleFactor_) };
         }
 
@@ -313,11 +313,11 @@ namespace stmcpp::units {
         constexpr frequency freq() const;
 
         #ifdef STMCPP_UNITS_DURATION_HIGHRANGE
-            constexpr static duration fromNanoSeconds(unsigned nanoseconds) {
+            static constexpr duration fromNanoSeconds(unsigned nanoseconds) {
                 return { microseconds * (durationScaleFactor_ / 1'000)};
             }
 
-            constexpr static duration fromPicoSeconds(unsigned picoseconds) {
+            static constexpr duration fromPicoSeconds(unsigned picoseconds) {
                 return { microseconds * (durationScaleFactor_ / 1'000)};
             }
 
@@ -361,22 +361,22 @@ namespace stmcpp::units {
     */
     struct frequency : unit<std::uint32_t, frequency> {
 		template<typename T>
-		constexpr static frequency fromHertz(T hertz) {
+		static constexpr frequency fromHertz(T hertz) {
             return { static_cast<StorageType_>(hertz) };
         }
 
 		template<typename T>
-		constexpr static frequency fromKiloHertz(T kilohertz) {
+		static constexpr frequency fromKiloHertz(T kilohertz) {
             return { static_cast<StorageType_>(kilohertz * 1'000) };
         }
 
 		template<typename T>
-		constexpr static frequency fromMegaHertz(T megahertz) {
+		static constexpr frequency fromMegaHertz(T megahertz) {
             return { static_cast<StorageType_>(megahertz * 1'000'000) };
         }
 
         template<typename T>
-		constexpr static frequency fromGigaHertz(T gigahertz) {
+		static constexpr frequency fromGigaHertz(T gigahertz) {
             return { static_cast<StorageType_>(gigahertz * 1'000'000'000) };
         }
 
@@ -406,17 +406,17 @@ namespace stmcpp::units {
     */
     struct baudrate : unit<std::uint32_t, baudrate> {
 		template<typename T>
-		constexpr static baudrate fromBaud(T baud) {
+		static constexpr baudrate fromBaud(T baud) {
             return { static_cast<StorageType_>(baud) };
         }
 
 		template<typename T>
-		constexpr static baudrate fromKiloBaud(T kilobaud) {
+		static constexpr baudrate fromKiloBaud(T kilobaud) {
             return { static_cast<StorageType_>(kilobaud * 1'000) };
         }
 
         template<typename T>
-		constexpr static baudrate fromMegaBaud(T megabaud) {
+		static constexpr baudrate fromMegaBaud(T megabaud) {
             return { static_cast<StorageType_>(megabaud * 1'000'000) };
         }
 
