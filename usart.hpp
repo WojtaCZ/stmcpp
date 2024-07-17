@@ -21,7 +21,9 @@
 #include <cstdint>
 #include <cstddef>
 #include <cmath>
+
 #include "register.hpp"
+#include "units.hpp"
 #include "stm32h753xx.h"
 
 namespace stmcpp::usart {
@@ -165,29 +167,25 @@ namespace stmcpp::usart {
         txFree          = USART_ISR_TXE_TXFNF
     };
 
-    //template<unsigned int periphclock, unsigned int baudrate, usart::overSampling oversamp = usart::overSampling::times16>
-    constexpr std::uint32_t baudToRaw(const unsigned int periphclock, const unsigned int baudrate, const usart::overSampling oversamp = usart::overSampling::times16) {
-        
-        auto multiplier_ = (oversamp == usart::overSampling::times16) ? 1.0 : 2.0;
-        auto baud_ = (multiplier_ * static_cast<double>(periphclock)) / static_cast<double>(baudrate);
-
-        if (baud_ - static_cast<double>(static_cast<uint32_t>(baud_)) > 0.5) {
-            return static_cast<uint32_t>(baud_) + 1;
-        }
-        
-        return static_cast<uint32_t>(baud_);
-    }
-
     template<usart::peripheral Peripheral>
     class uart {
         private:
             USART_TypeDef * const usartHandle_ = reinterpret_cast<USART_TypeDef *>(static_cast<std::uint32_t>(Peripheral));
 
         public:
-            constexpr uart(std::uint32_t rawbaud, usart::divider divider = usart::divider::nodivide, bool fifomode = false, usart::wordLength wordLength = usart::wordLength::eightbit, usart::overSampling overSampling = usart::overSampling::times16,
+            constexpr uart(units::frequency periphclock, units::baudrate speed, usart::divider divider = usart::divider::nodivide, bool fifomode = false, usart::wordLength wordLength = usart::wordLength::eightbit, usart::overSampling overSampling = usart::overSampling::times16,
                             usart::parity parity = usart::parity::none, usart::stopBits stopBits = usart::stopBits::one, usart::bitOrder bitOrder = usart::bitOrder::lsbfirst
                           ) {
-                                
+
+                constexpr auto multiplier_ = (overSampling == usart::overSampling::times16) ? 1.0 : 2.0;
+                constexpr float floatBaud_ = (multiplier_ * static_cast<double>(periphclock.toHertz())) / static_cast<double>(speed.toBaud());
+                constexpr std::uint32_t rawBaud_;
+
+                // Round the baudrate 
+                if constexpr (floatBaud_ - static_cast<double>(static_cast<uint32_t>(floatBaud_)) > 0.5) {
+                    rawBaud_ = static_cast<uint32_t>(floatBaud_) + 1;
+                }else rawBaud_ = static_cast<uint32_t>(floatBaud_);
+
                 reg::write(std::ref(usartHandle_->CR1),
                     ((static_cast<uint8_t>(fifomode) & 0b1) << USART_CR1_FIFOEN_Pos) |
                     ((static_cast<uint8_t>(wordLength) & 0b10) << (USART_CR1_M1_Pos - 1)) |
@@ -203,8 +201,8 @@ namespace stmcpp::usart {
                 );
 
                 if (overSampling == usart::overSampling::times16) {
-                    reg::write(std::ref(usartHandle_->BRR), rawbaud);
-                } else reg::write(std::ref(usartHandle_->BRR), (rawbaud & 0xFFFFFFF8) | ((rawbaud >> 1) & 0x3));
+                    reg::write(std::ref(usartHandle_->BRR), rawBaud_);
+                } else reg::write(std::ref(usartHandle_->BRR), (rawBaud_ & 0xFFFFFFF8) | ((rawBaud_ >> 1) & 0x3));
                 
             }
 

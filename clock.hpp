@@ -23,6 +23,8 @@
 #include <array>
 
 #include "register.hpp"
+#include "units.hpp"
+
 #include "stm32h753xx.h"
 #include "stmcpp-config.hpp"
 
@@ -30,6 +32,7 @@ extern "C" void SysTick_Handler();
 
 namespace stmcpp::clock {
     using namespace stmcpp;
+    using namespace stmcpp::units;
 
     enum class peripheral : std::uint16_t {
         mdma        = (0x0000) | RCC_AHB3ENR_MDMAEN_Pos,
@@ -333,15 +336,16 @@ namespace stmcpp::clock {
     class systick final {
         private:
             inline volatile static std::uint32_t ticks_ = 0;
-
+            inline static units::duration resolution_;
         public:
             systick() = delete;
             systick(const systick &) = delete;
             systick(systick &&) = delete;
 
-            static void init() {
-                constexpr auto reloadVal_ = (static_cast<std::uint32_t>(stmcpp::config::SYSCLK / stmcpp::config::SYSTICK) - 1);
-                static_assert(reloadVal_ > 0, "The reload value has to be bigger than 0! Consider lowering the frequency.");
+            static void init(units::duration resolution = 1_ms) {
+                resolution_ = resolution;
+
+                auto reloadVal_ = ((config::sysclock.toHertz() / resolution.freq().toHertz()) - 1);
                     
                 //Zero out the counter
                 reg::write(std::ref(SysTick->VAL), 0);
@@ -357,8 +361,12 @@ namespace stmcpp::clock {
                 );
             };
 
-            static std::uint32_t getTicks() {
+            static inline std::uint32_t getTicks() {
                 return ticks_;
+            }
+
+            static units::duration getDuration() {
+                return resolution_ * getTicks();
             }
 
             static inline void increment() {

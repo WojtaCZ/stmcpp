@@ -33,7 +33,7 @@
 namespace stmcpp::units {
 
 	template<typename StorageType, typename ConcreteType>
-	struct Unit {
+	struct unit {
         using StorageType_ = StorageType;
         StorageType_ raw_;
 
@@ -60,12 +60,12 @@ namespace stmcpp::units {
         }
 
         template<typename Scalar>
-        constexpr friend ConcreteType operator* (Scalar s, Unit q) {
+        constexpr friend ConcreteType operator* (Scalar s, unit q) {
             return { static_cast<StorageType_>(q.raw_ * s) };
         }
 
         template<typename Scalar>
-        constexpr friend ConcreteType operator* (Unit q, Scalar s) {
+        constexpr friend ConcreteType operator* (unit q, Scalar s) {
             return { static_cast<StorageType_>(q.raw_ * s) };
         }
 
@@ -80,7 +80,7 @@ namespace stmcpp::units {
             return { static_cast<StorageType_>(raw_ / s) };
         }
         
-        constexpr float operator/ (Unit q) const {
+        constexpr float operator/ (unit q) const {
             return raw_ / static_cast<float>(q.raw_);
         }
 
@@ -104,26 +104,26 @@ namespace stmcpp::units {
 
     // Change the storage type based on the range required
     #ifdef STMCPP_UNITS_VOLTAGE_HIGHRANGE
-        using VoltageStorage = std::int64_t; // Allow for Megavolt to Picovolt range (value stored in picovolts)
+        using voltageStorage_ = std::int64_t; // Allow for Megavolt to Picovolt range (value stored in picovolts)
         static constexpr auto voltageScaleFactor_ = 1'000'000;
     #else
-        using VoltageStorage = std::int32_t; // Allow for Kilovolt to Microvolt range (value stored in microvolts)
+        using voltageStorage_ = std::int32_t; // Allow for Kilovolt to Microvolt range (value stored in microvolts)
         static constexpr auto voltageScaleFactor_ = 1;
     #endif
 
-	struct Voltage : public Unit<VoltageStorage, Voltage> {
+	struct voltage : public unit<voltageStorage_, voltage> {
 		template<typename T>
-		constexpr static Voltage fromVolts(T volts) {
+		constexpr static voltage fromVolts(T volts) {
             return { static_cast<StorageType_>(volts * (1'000'000ll * voltageScaleFactor_)) };
         }
 
         template<typename T>
-		constexpr static Voltage fromMilliVolts(T millivolts) {
+		constexpr static voltage fromMilliVolts(T millivolts) {
             return { static_cast<StorageType_>(millivolts * (1'000 * voltageScaleFactor_)) };
         }
 
         template<typename T>
-		constexpr static Voltage fromMicroVolts(T microvolts) {
+		constexpr static voltage fromMicroVolts(T microvolts) {
             return { static_cast<StorageType_>(microvolts * voltageScaleFactor_) };
         }
 
@@ -141,17 +141,17 @@ namespace stmcpp::units {
 
         #ifdef STMCPP_UNITS_VOLTAGE_HIGHRANGE
             template<typename T>
-            constexpr static Voltage fromKiloVolts(T kilovolts) {
+            constexpr static voltage fromKiloVolts(T kilovolts) {
                 return { static_cast<StorageType_>(kilovolts * (1'000'000'000ll * voltageScaleFactor_)) };
             }
 
             template<typename T>
-            constexpr static Voltage fromNanoVolts(T nanovolts) {
+            constexpr static voltage fromNanoVolts(T nanovolts) {
                 return { static_cast<StorageType_>(nanovolts * (voltageScaleFactor_ / 1'000)) };
             }
 
             template<typename T>
-            constexpr static Voltage fromPicoVolts(T picovolts) {
+            constexpr static voltage fromPicoVolts(T picovolts) {
                 return { static_cast<StorageType_>(picovolts *  (voltageScaleFactor_ / 1'000'000)) };
             }
 
@@ -170,16 +170,16 @@ namespace stmcpp::units {
 
 	};
 
-    constexpr Voltage operator""_V(unsigned long long voltage) { return Voltage::fromVolts(voltage); }
-    constexpr Voltage operator""_mV(unsigned long long voltage) { return Voltage::fromMilliVolts(voltage); }
-    constexpr Voltage operator""_uV(unsigned long long voltage) { return Voltage::fromMicroVolts(voltage); }
+    constexpr voltage operator""_V(unsigned long long voltage) { return voltage::fromVolts(voltage); }
+    constexpr voltage operator""_mV(unsigned long long voltage) { return voltage::fromMilliVolts(voltage); }
+    constexpr voltage operator""_uV(unsigned long long voltage) { return voltage::fromMicroVolts(voltage); }
     
     static_assert((1_V + 111_mV) - 1111000_uV == 0_V, "Voltage units check.");
 
     #ifdef STMCPP_UNITS_VOLTAGE_HIGHRANGE
-        constexpr Voltage operator""_kV(unsigned long long voltage) { return Voltage::fromKiloVolts(voltage); }
-        constexpr Voltage operator""_nV(unsigned long long voltage) { return Voltage::fromNanoVolts(voltage); }
-        constexpr Voltage operator""_pV(unsigned long long voltage) { return Voltage::fromPicoVolts(voltage); }
+        constexpr voltage operator""_kV(unsigned long long voltage) { return voltage::fromKiloVolts(voltage); }
+        constexpr voltage operator""_nV(unsigned long long voltage) { return voltage::fromNanoVolts(voltage); }
+        constexpr voltage operator""_pV(unsigned long long voltage) { return voltage::fromPicoVolts(voltage); }
 
         static_assert((123_kV + 456_V + 789_mV + 123_uV + 456_nV) - 123456789123456000_pV == 0_V, "Voltage units check.");
     #endif
@@ -190,26 +190,26 @@ namespace stmcpp::units {
 
     // Change the storage type based on the range required
     #ifdef STMCPP_UNITS_CURRENT_HIGHRANGE
-        using CurrentStorage = std::int64_t; // Allow for Megaampere to Picoampere range (value stored in picoampere)
+        using currentStorage_ = std::int64_t; // Allow for Megaampere to Picoampere range (value stored in picoampere)
         static constexpr auto currentScaleFactor_ = 1'000'000;
     #else
-        using CurrentStorage = std::int32_t; // Allow for Kiloampere to Microampere range (value stored in microampere)
+        using currentStorage_ = std::int32_t; // Allow for Kiloampere to Microampere range (value stored in microampere)
         static constexpr auto currentScaleFactor_ = 1;
     #endif
 
-	struct Current : public Unit<CurrentStorage, Current> {
+	struct current : public unit<currentStorage_, current> {
 		template<typename T>
-		constexpr static Current fromAmperes(T amperes) {
+		constexpr static current fromAmperes(T amperes) {
             return { static_cast<StorageType_>(amperes * (1'000'000ll * currentScaleFactor_)) };
         }
 
         template<typename T>
-		constexpr static Current fromMilliAmperes(T milliamperes) {
+		constexpr static current fromMilliAmperes(T milliamperes) {
             return { static_cast<StorageType_>(milliamperes * (1'000 * currentScaleFactor_)) };
         }
 
         template<typename T>
-		constexpr static Current fromMicroAmperes(T microamperes) {
+		constexpr static current fromMicroAmperes(T microamperes) {
             return { static_cast<StorageType_>(microamperes * currentScaleFactor_) };
         }
 
@@ -227,17 +227,17 @@ namespace stmcpp::units {
 
         #ifdef STMCPP_UNITS_CURRENT_HIGHRANGE
             template<typename T>
-            constexpr static Current fromKiloAmperes(T kiloamperes) {
+            constexpr static current fromKiloAmperes(T kiloamperes) {
                 return { static_cast<StorageType_>(kiloamperes * (1'000'000'000ll * currentScaleFactor_)) };
             }
 
             template<typename T>
-            constexpr static Current fromNanoAmperes(T nanoamperes) {
+            constexpr static current fromNanoAmperes(T nanoamperes) {
                 return { static_cast<StorageType_>(nanoamperes * (currentScaleFactor_ / 1'000)) };
             }
 
             template<typename T>
-            constexpr static Current fromPicoAmperes(T picoamperes) {
+            constexpr static current fromPicoAmperes(T picoamperes) {
                 return { static_cast<StorageType_>(picoamperes *  (currentScaleFactor_ / 1'000'000)) };
             }
 
@@ -256,16 +256,16 @@ namespace stmcpp::units {
 
 	};
 
-    constexpr Current operator""_A(unsigned long long current) { return Current::fromAmperes(current); }
-    constexpr Current operator""_mA(unsigned long long current) { return Current::fromMilliAmperes(current); }
-    constexpr Current operator""_uA(unsigned long long current) { return Current::fromMicroAmperes(current); }
+    constexpr current operator""_A(unsigned long long current) { return current::fromAmperes(current); }
+    constexpr current operator""_mA(unsigned long long current) { return current::fromMilliAmperes(current); }
+    constexpr current operator""_uA(unsigned long long current) { return current::fromMicroAmperes(current); }
     
     static_assert((123_A + 456_mA) - 123456000_uA == 0_A, "Current units check.");
 
     #ifdef STMCPP_UNITS_CURRENT_HIGHRANGE
-        constexpr Current operator""_kA(unsigned long long voltage) { return Current::fromKiloAmperes(current); }
-        constexpr Current operator""_nA(unsigned long long voltage) { return Current::fromNanoAmperes(current); }
-        constexpr Current operator""_pA(unsigned long long voltage) { return Current::fromPicoAmperes(current); }
+        constexpr current operator""_kA(unsigned long long voltage) { return current::fromKiloAmperes(current); }
+        constexpr current operator""_nA(unsigned long long voltage) { return current::fromNanoAmperes(current); }
+        constexpr current operator""_pA(unsigned long long voltage) { return current::fromPicoAmperes(current); }
 
         static_assert((123_kA + 456_A + 789_mA + 123_uA + 456_nA) - 123456789123456000_pA == 0_A, "Current units check.");
     #endif
@@ -276,23 +276,25 @@ namespace stmcpp::units {
 
     // Change the storage type based on the range required
     #ifdef STMCPP_UNITS_DURATION_HIGHRANGE
-        using DurationStorage = std::uint64_t; // Allow for higher range: ~213days @ 1ps resolution
+        using durationStorage_ = std::uint64_t; // Allow for higher range: ~213days @ 1ps resolution
         static constexpr auto durationScaleFactor_ = 1'000'000;
     #else
-        using DurationStorage = std::uint32_t; // Allow for a range of ~35minutes @ 1us resolution
+        using durationStorage_ = std::uint32_t; // Allow for a range of ~35minutes @ 1us resolution
         static constexpr auto durationScaleFactor_ = 1;
     #endif
 
-	struct Duration : Unit<DurationStorage, Duration> {
-        constexpr static Duration fromMicroSeconds(unsigned microseconds) {
+    struct frequency;
+
+	struct duration : unit<durationStorage_, duration> {
+        constexpr static duration fromMicroSeconds(unsigned microseconds) {
             return { microseconds * durationScaleFactor_};
         }
 
-		constexpr static Duration fromMilliSeconds(unsigned milliseconds) {
+		constexpr static duration fromMilliSeconds(unsigned milliseconds) {
             return { milliseconds * (1'000 * durationScaleFactor_) };
         }
 
-		constexpr static Duration fromSeconds(unsigned seconds) {
+		constexpr static duration fromSeconds(unsigned seconds) {
             return { seconds * (1'000'000 * durationScaleFactor_) };
         }
 
@@ -308,12 +310,14 @@ namespace stmcpp::units {
             return raw_ / (1'000'000.0f * durationScaleFactor_);
         }
 
+        constexpr frequency freq() const;
+
         #ifdef STMCPP_UNITS_DURATION_HIGHRANGE
-            constexpr static Duration fromNanoSeconds(unsigned nanoseconds) {
+            constexpr static duration fromNanoSeconds(unsigned nanoseconds) {
                 return { microseconds * (durationScaleFactor_ / 1'000)};
             }
 
-            constexpr static Duration fromPicoSeconds(unsigned picoseconds) {
+            constexpr static duration fromPicoSeconds(unsigned picoseconds) {
                 return { microseconds * (durationScaleFactor_ / 1'000)};
             }
 
@@ -333,21 +337,21 @@ namespace stmcpp::units {
                 return raw_ / (1.0f * (voltageScaleFactor_ / 1'000ll));
             }
 
-            constexpr DurationStorage toPicoSeconds() const {
+            constexpr durationStorage_ toPicoSeconds() const {
                 return raw_;
             }
         #endif
 	};
 
-    constexpr Duration operator""_us(unsigned long long duration) { return Duration::fromMicroSeconds(duration); }
-    constexpr Duration operator""_ms(unsigned long long duration) { return Duration::fromMilliSeconds(duration); }
-    constexpr Duration operator""_s(unsigned long long duration) { return Duration::fromSeconds(duration); }
+    constexpr duration operator""_us(unsigned long long duration) { return duration::fromMicroSeconds(duration); }
+    constexpr duration operator""_ms(unsigned long long duration) { return duration::fromMilliSeconds(duration); }
+    constexpr duration operator""_s(unsigned long long duration) { return duration::fromSeconds(duration); }
 
     static_assert((123_s + 456_ms) - 123456000_us == 0_s, "Duration units check.");
 
     #ifdef STMCPP_UNITS_DURATION_HIGHRANGE
-        constexpr Duration operator""_ns(unsigned long long duration) { return Duration::fromNanoSeconds(duration); }
-        constexpr Duration operator""_ps(unsigned long long duration) { return Duration::fromPicoSeconds(duration); }
+        constexpr duration operator""_ns(unsigned long long duration) { return duration::fromNanoSeconds(duration); }
+        constexpr duration operator""_ps(unsigned long long duration) { return duration::fromPicoSeconds(duration); }
 
         static_assert((123_s + 456_ms + 789_us + 123_ns) - 123456789123000_ps == 0_s, "Duration units check.");
     #endif
@@ -355,24 +359,24 @@ namespace stmcpp::units {
     /*
         Frequency unit (stored in hertz)
     */
-    struct Frequency : Unit<std::uint32_t, Frequency> {
+    struct frequency : unit<std::uint32_t, frequency> {
 		template<typename T>
-		constexpr static Frequency fromHertz(T hertz) {
+		constexpr static frequency fromHertz(T hertz) {
             return { static_cast<StorageType_>(hertz) };
         }
 
 		template<typename T>
-		constexpr static Frequency fromKiloHertz(T kilohertz) {
+		constexpr static frequency fromKiloHertz(T kilohertz) {
             return { static_cast<StorageType_>(kilohertz * 1'000) };
         }
 
 		template<typename T>
-		constexpr static Frequency fromMegaHertz(T megahertz) {
+		constexpr static frequency fromMegaHertz(T megahertz) {
             return { static_cast<StorageType_>(megahertz * 1'000'000) };
         }
 
         template<typename T>
-		constexpr static Frequency fromGigaHertz(T gigahertz) {
+		constexpr static frequency fromGigaHertz(T gigahertz) {
             return { static_cast<StorageType_>(gigahertz * 1'000'000'000) };
         }
 
@@ -388,16 +392,64 @@ namespace stmcpp::units {
             return raw_ / 1'000'000.0f;
         }
 
-		constexpr Duration period() const { 
-            return Duration::fromMicroSeconds(1'000'000 / raw_);
+		constexpr duration period() const;
+	};
+
+    constexpr frequency operator""_Hz(unsigned long long frequency) { return frequency::fromHertz(frequency); }
+    constexpr frequency operator""_kHz(unsigned long long frequency) { return frequency::fromKiloHertz(frequency); }
+    constexpr frequency operator""_MHz(unsigned long long frequency) { return frequency::fromMegaHertz(frequency); }
+
+    static_assert((123_MHz + 456_kHz) - 123456000_Hz == 0_Hz, "Frequency units check.");
+
+    /*
+        Baudrate unit (stored in baud)
+    */
+    struct baudrate : unit<std::uint32_t, baudrate> {
+		template<typename T>
+		constexpr static baudrate fromBaud(T baud) {
+            return { static_cast<StorageType_>(baud) };
+        }
+
+		template<typename T>
+		constexpr static baudrate fromKiloBaud(T kilobaud) {
+            return { static_cast<StorageType_>(kilobaud * 1'000) };
+        }
+
+        template<typename T>
+		constexpr static baudrate fromMegaBaud(T megabaud) {
+            return { static_cast<StorageType_>(megabaud * 1'000'000) };
+        }
+
+		constexpr StorageType_ toBaud() const { 
+            return raw_;
+        }
+
+        constexpr float toKiloBaud() const { 
+            return raw_ / 1'000.0f;
+        }
+
+        constexpr float toMegaBaud() const { 
+            return raw_ / 1'000'000.0f;
         }
 	};
 
-    constexpr Frequency operator""_Hz(unsigned long long freq) { return Frequency::fromHertz(freq); }
-    constexpr Frequency operator""_kHz(unsigned long long freq) { return Frequency::fromKiloHertz(freq); }
-    constexpr Frequency operator""_MHz(unsigned long long freq) { return Frequency::fromMegaHertz(freq); }
+    constexpr baudrate operator""_Bd(unsigned long long baudrate) { return baudrate::fromBaud(baudrate); }
+    constexpr baudrate operator""_kBd(unsigned long long baudrate) { return baudrate::fromKiloBaud(baudrate); }
+    constexpr baudrate operator""_MBd(unsigned long long baudrate) { return baudrate::fromMegaBaud(baudrate); }
 
-    static_assert((123_MHz + 456_kHz) - 123456000_Hz == 0_Hz, "Frequency units check.");
+    static_assert((123_MBd + 456_kBd) - 123456000_Bd == 0_Bd, "Baudrate units check.");
+
+
+    /*
+        Functions for some unit conversions
+    */
+    constexpr frequency duration::freq() const { 
+        return frequency::fromHertz((1'000'000 * durationScaleFactor_) / raw_);
+    }
+
+    constexpr duration frequency::period() const { 
+        return duration::fromMicroSeconds(1'000'000 / raw_);
+    }
 }
 
 #endif
