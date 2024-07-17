@@ -130,11 +130,11 @@ namespace stmcpp::gpio{
             };
 
             void set() const {
-                reg::write(std::ref(gpioHandle_->BSRR), 0x0001, Pin);
+                reg::write(std::ref(gpioHandle_->BSRR), 0x00000001, Pin);
             }
 
             void clear() const {
-                reg::write(std::ref(gpioHandle_->BSRR), 0x0100, Pin);
+                reg::write(std::ref(gpioHandle_->BSRR), 0x00010000, Pin);
             }
 
             void write(bool state) const {
@@ -142,12 +142,12 @@ namespace stmcpp::gpio{
             }
 
             void toggle() const {
-                reg::toggle(std::ref(gpioHandle_->ODR), 0x0001, Pin);
+                reg::toggle(std::ref(gpioHandle_->ODR), 0x00000001, Pin);
             }
 
             bool read() const {
                 //The internal reg library mask bitshift is intentionally not used to save on bitshift operations
-                return static_cast<bool>(reg::read(std::ref(gpioHandle_->IDR), 0x0001 << Pin));
+                return static_cast<bool>(reg::read(std::ref(gpioHandle_->IDR), 0x00000001 << Pin));
             }
 
             void setMode(gpio::mode mode) const {
