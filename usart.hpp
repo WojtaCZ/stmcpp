@@ -23,7 +23,7 @@
 #include <cmath>
 
 #include <stmcpp/register.hpp>
-#include "units.hpp"
+#include <stmcpp/units.hpp>
 #include "stm32h753xx.h"
 
 namespace stmcpp::usart {
@@ -174,7 +174,7 @@ using namespace stmcpp::units;
             USART_TypeDef * const usartHandle_ = reinterpret_cast<USART_TypeDef *>(static_cast<std::uint32_t>(Peripheral));
 
         public:
-            constexpr uart(units::frequency periphclock, usart::divider divider, units::baudrate speed, bool fifomode = false, usart::wordLength wordLength = usart::wordLength::eightBit, usart::overSampling overSampling = usart::overSampling::times16,
+            constexpr uart(units::frequency periphClock, usart::divider divider, units::baudrate speed, bool fifomode = false, usart::wordLength wordLength = usart::wordLength::eightBit, usart::overSampling overSampling = usart::overSampling::times16,
                             usart::parity parity = usart::parity::none, usart::stopBits stopBits = usart::stopBits::one, usart::bitOrder bitOrder = usart::bitOrder::lsbFirst
                           ) {
                 
@@ -185,7 +185,8 @@ using namespace stmcpp::units;
                 constexpr double multiplier_ = multiplierLut_.at(static_cast<std::uint8_t>(overSampling));
                 
                 // Calculate the baud rate and than round it to get the raw value
-                constexpr int rawBaud_ = (10 * multiplier_ * (periphclock.toHertz() / dividerValue_)) / speed.toBaud();
+                int rawBaud_ = (10 * multiplier_ * (periphClock.toHertz() / dividerValue_)) / speed.toBaud();
+
                 if (rawBaud_ - (rawBaud_ / 10) >= 5) {
                     rawBaud_ = (rawBaud_ / 10) + 1;
                 }else rawBaud_ = (rawBaud_ / 10);
