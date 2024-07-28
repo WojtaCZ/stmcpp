@@ -39,11 +39,13 @@ namespace stmcpp::reg {
     }
 
     template <typename A = regbase>
+    [[nodiscard]]
     constexpr A read(std::reference_wrapper<A> address) {
         return address.get();
     }
 
     template <typename A = regbase, typename M>
+    [[nodiscard]]
     constexpr A read(std::reference_wrapper<A> address, M mask, unsigned int bitshift = 0) {
         return (address.get() & (mask << bitshift)) >> bitshift;
     }

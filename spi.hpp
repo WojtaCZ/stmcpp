@@ -289,7 +289,7 @@ namespace stmcpp::spi {
                 }
 
                 void clearInterruptFlag(interrupt interrupt) const {
-                    reg::read(std::ref(spiHandle_->IFCR), static_cast<std::uint32_t>(interrupt));
+                    reg::set(std::ref(spiHandle_->IFCR), static_cast<std::uint32_t>(interrupt));
                 }
 
                 bool rxFifoNotEmpty() const {
