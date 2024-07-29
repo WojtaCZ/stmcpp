@@ -41,9 +41,26 @@ namespace stmcpp::i2c {
         busy        = (0b1 << I2C_ISR_BUSY_Pos)  ///< Communication on the bus is in progress
     };
 
-    enum addressing : std::uint8_t {
-        sevenBit = 0b0,
-        tenBit   = 0b1
+    
+    class address {
+        public:
+            enum type : std::uint8_t {
+                sevenBit = 0b0,
+                tenBit   = 0b1
+            };
+
+        protected:
+            type addressType_;
+            std::uint16_t addressRaw_;
+
+        public:
+            address (std::uint16_t address, type type = type::sevenBit) : addressType_(type), addressRaw_(address) {
+                if (type == type::sevenBit) {
+                    addressRaw_ <<= 1;
+                }
+            }
+
+        template<peripheral Peripheral> friend class i2c;
     };
 
     template<peripheral Peripheral>
@@ -133,15 +150,13 @@ namespace stmcpp::i2c {
                 reg::set(std::ref(i2cHandle_->CR2), I2C_CR2_STOP);
             }
 
-            std::uint8_t send(std::vector<std::uint8_t> & data, std::uint16_t slaveAddress, addressing addressing = addressing::sevenBit) const {
+            std::uint8_t send(std::vector<std::uint8_t> & data, address & slaveAddress) const {
                 int nbytes_ = data.size();
                 if (nbytes_ > 255) return 1;
-
-                if (addressing == sevenBit) slaveAddress <<= 1;
                 
                 std::uint32_t config_ = (nbytes_ << I2C_CR2_NBYTES_Pos) | 
-                                                  (slaveAddress << I2C_CR2_SADD_Pos) |
-                                                  (static_cast<std::uint8_t>(addressing) << I2C_CR2_ADD10_Pos) |
+                                                  (slaveAddress.addressRaw_ << I2C_CR2_SADD_Pos) |
+                                                  (static_cast<std::uint8_t>(slaveAddress.addressType_) << I2C_CR2_ADD10_Pos) |
                                                   (0b1 << I2C_CR2_AUTOEND_Pos) | 
                                                   (0b0 << I2C_CR2_RD_WRN_Pos);
                                                   
@@ -168,13 +183,11 @@ namespace stmcpp::i2c {
                 return 0;
             }
 
-            std::uint8_t read8bitAddress(std::uint8_t regAddress, std::uint16_t slaveAddress, addressing addressing = addressing::sevenBit) const {
-                
-                if (addressing == sevenBit) slaveAddress <<= 1;
+            std::uint8_t read8bitAddress(std::uint8_t regAddress, address & slaveAddress) const {
 
                 std::uint32_t config_ = (1 << I2C_CR2_NBYTES_Pos) | 
-                                        (slaveAddress << I2C_CR2_SADD_Pos) |
-                                        (static_cast<std::uint8_t>(addressing) << I2C_CR2_ADD10_Pos) |
+                                        (slaveAddress.addressRaw_ << I2C_CR2_SADD_Pos) |
+                                        (static_cast<std::uint8_t>(slaveAddress.addressType_) << I2C_CR2_ADD10_Pos) |
                                         (0b0<< I2C_CR2_AUTOEND_Pos) |
                                         (0b0 << I2C_CR2_RD_WRN_Pos);
                                                   
@@ -201,8 +214,8 @@ namespace stmcpp::i2c {
                 reg::set(std::ref(i2cHandle_->CR2), I2C_CR2_STOP);
 
                 config_ = (1 << I2C_CR2_NBYTES_Pos) | 
-                          (slaveAddress << I2C_CR2_SADD_Pos) |
-                          (static_cast<std::uint8_t>(addressing) << I2C_CR2_ADD10_Pos) |
+                          (slaveAddress.addressRaw_ << I2C_CR2_SADD_Pos) |
+                          (static_cast<std::uint8_t>(slaveAddress.addressType_) << I2C_CR2_ADD10_Pos) |
                           (0b0<< I2C_CR2_AUTOEND_Pos) |
                           (0b1 << I2C_CR2_RD_WRN_Pos);
                                                   
@@ -223,13 +236,11 @@ namespace stmcpp::i2c {
                 return val_;
             }
 
-            std::uint8_t read16bitAddress(std::uint16_t regAddress, std::uint16_t slaveAddress, addressing addressing = addressing::sevenBit) const {
-                
-                if (addressing == sevenBit) slaveAddress <<= 1;
+            std::uint8_t read16bitAddress(std::uint16_t regAddress, address & slaveAddress) const {
                 
                 std::uint32_t config_ = (2 << I2C_CR2_NBYTES_Pos) | 
-                                        (slaveAddress << I2C_CR2_SADD_Pos) |
-                                        (static_cast<std::uint8_t>(addressing) << I2C_CR2_ADD10_Pos) |
+                                        (slaveAddress.addressRaw_ << I2C_CR2_SADD_Pos) |
+                                        (static_cast<std::uint8_t>(slaveAddress.addressType_) << I2C_CR2_ADD10_Pos) |
                                         (0b0<< I2C_CR2_AUTOEND_Pos) |
                                         (0b0 << I2C_CR2_RD_WRN_Pos);
                                                   
@@ -261,8 +272,8 @@ namespace stmcpp::i2c {
                 reg::set(std::ref(i2cHandle_->CR2), I2C_CR2_STOP);
 
                 config_ = (1 << I2C_CR2_NBYTES_Pos) | 
-                          (slaveAddress << I2C_CR2_SADD_Pos) |
-                          (static_cast<std::uint8_t>(addressing) << I2C_CR2_ADD10_Pos) |
+                          (slaveAddress.addressRaw_ << I2C_CR2_SADD_Pos) |
+                          (static_cast<std::uint8_t>(slaveAddress.addressType_) << I2C_CR2_ADD10_Pos) |
                           (0b0<< I2C_CR2_AUTOEND_Pos) |
                           (0b1 << I2C_CR2_RD_WRN_Pos);
                                                   
