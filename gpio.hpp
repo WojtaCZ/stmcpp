@@ -120,14 +120,17 @@ namespace stmcpp::gpio{
             GPIO_TypeDef * const gpioHandle_ = reinterpret_cast<GPIO_TypeDef *>(Port);
 
         public:
-            constexpr pin(gpio::mode mode = gpio::mode::input, gpio::otype otype = gpio::otype::pushPull, gpio::pull pull = gpio::pull::noPull, gpio::speed speed = gpio::speed::low) {
+            constexpr pin(gpio::mode mode, gpio::otype otype = gpio::otype::pushPull, gpio::speed speed = gpio::speed::low, gpio::pull pull = gpio::pull::noPull) {
                 static_assert(Pin < 16, "The pin number cannot be greater than 15!");
                
                 setMode(mode);
                 setSpeed(speed);
                 setPull(pull);
                 setOutputType(otype);
-            };
+            }
+
+            constexpr pin(gpio::mode mode, gpio::pull pull) :  pin (mode, gpio::otype::pushPull, gpio::speed::low, pull) { }
+            constexpr pin(gpio::mode mode, gpio::otype otype, gpio::pull pull) :  pin (mode, otype, gpio::speed::low, pull) { }
 
             void set() const {
                 reg::write(std::ref(gpioHandle_->BSRR), 0x00000001, Pin);
