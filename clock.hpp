@@ -343,6 +343,7 @@ namespace stmcpp::clock {
         private:
             inline volatile static std::uint32_t ticks_ = 0;
             static inline duration resolution_ = 1_ms;
+            static inline bool initialized_ = false; 
         public:
             systick() = delete;
             systick(const systick &) = delete;
@@ -365,6 +366,8 @@ namespace stmcpp::clock {
                         0b1 << SysTick_CTRL_TICKINT_Pos |
                         0b1 << SysTick_CTRL_ENABLE_Pos 
                 );
+
+                initialized_ = true;
             };
 
             static inline std::uint32_t getTicks() {
@@ -383,6 +386,10 @@ namespace stmcpp::clock {
             static inline void increment() {
                 ++ticks_;
             } 
+
+            static inline bool initialized() {
+                return initialized_;
+            }
 
             friend void SysTick_Handler();
     };    
