@@ -1,5 +1,5 @@
 /* 
- * This file is part of the stmcpp distribution (https://github.com/WojtaCZ/stm-cpp).
+ * This file is part of the stmcpp distribution (https://github.com/WojtaCZ/stmcpp).
  * Copyright (c) 2024 Vojtech Vosahlo.
  * 
  * This program is free software: you can redistribute it and/or modify  

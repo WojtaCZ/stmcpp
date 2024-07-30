@@ -71,7 +71,7 @@ namespace stmcpp::i2c {
         private:
             I2C_TypeDef * const i2cHandle_ = reinterpret_cast<I2C_TypeDef *>(static_cast<std::uint32_t>(Peripheral));
 
-            void waitForInterrupt(interrupt flag, duration timeout = 100_ms) const {
+            void waitForInterrupt(interrupt flag, duration timeout = 5000_ms) const {
                 if(!stmcpp::clock::systick::initialized()) error::handler::hardThrow(error::code::systick_used_uninitialized);
                 duration timestamp_ = stmcpp::clock::systick::getDuration();
 
@@ -85,10 +85,20 @@ namespace stmcpp::i2c {
                     } else if (getInterruptFlag(interrupt::arbitrationError)) {
                         error::handler::hardThrow(error::code::i2c_arbitration);
                     } else if (getInterruptFlag(interrupt::overrunError)) {
-                        error::handler::hardThrow(error::code::i2c_overrun);
+                       //error::handler::hardThrow(error::code::i2c_overrun);
+                       return;
                     } 
                 }
 
+                error::handler::hardThrow(error::code::i2c_timeout);
+            }
+
+            void waitForNotBusy(duration timeout = 100_ms) const {
+                duration timestamp_ = stmcpp::clock::systick::getDuration();
+
+                while (stmcpp::clock::systick::getDuration() < (timestamp_ + timeout)) {
+                    if(!getStatusFlag(status::busy)) return;
+                }
                 error::handler::hardThrow(error::code::i2c_timeout);
             }
 
@@ -176,7 +186,7 @@ namespace stmcpp::i2c {
                 reg::set(std::ref(i2cHandle_->CR2), I2C_CR2_STOP);
             }
 
-            void send(std::vector<std::uint8_t> & data, address & slaveAddress) const {
+            void write(std::vector<std::uint8_t> & data, address & slaveAddress) const {
                 int nbytes_ = data.size();
                 if (nbytes_ > 255) error::handler::hardThrow(error::code::i2c_too_large_payload);
                 
@@ -188,6 +198,9 @@ namespace stmcpp::i2c {
                                                   
                 reg::change(std::ref(i2cHandle_->CR2), I2C_CR2_NBYTES_Msk | I2C_CR2_SADD_Msk | I2C_CR2_ADD10_Msk | I2C_CR2_AUTOEND_Msk | I2C_CR2_RD_WRN_Msk, config_);
                 
+                // Clear the flags
+                reg::write(std::ref(i2cHandle_->ICR), 0xFF);
+                
                 // Write each of the data bytes and wait for completion
                 start();
                 waitForInterrupt(interrupt::txInterrupt);
@@ -195,12 +208,110 @@ namespace stmcpp::i2c {
                     reg::write(std::ref(i2cHandle_->TXDR), byte);
                     waitForInterrupt(interrupt::txInterrupt);
                 }
-                stop();
+                waitForNotBusy();
+                //stop();
 
             }
 
-            std::uint8_t read8bitAddress(std::uint8_t regAddress, address & slaveAddress) const {
+            void write(std::uint8_t data, address & slaveAddress) const {
+                               
+                std::uint32_t config_ = (1 << I2C_CR2_NBYTES_Pos) | 
+                                        (slaveAddress.addressRaw_ << I2C_CR2_SADD_Pos) |
+                                        (static_cast<std::uint8_t>(slaveAddress.addressType_) << I2C_CR2_ADD10_Pos) |
+                                        (0b1 << I2C_CR2_AUTOEND_Pos) | 
+                                        (0b0 << I2C_CR2_RD_WRN_Pos);
+                                                  
+                reg::change(std::ref(i2cHandle_->CR2), I2C_CR2_NBYTES_Msk | I2C_CR2_SADD_Msk | I2C_CR2_ADD10_Msk | I2C_CR2_AUTOEND_Msk | I2C_CR2_RD_WRN_Msk, config_);
+                
+                // Clear the flags
+                reg::write(std::ref(i2cHandle_->ICR), 0xFF);
 
+                // Write each of the data bytes and wait for completion
+                start();
+                waitForInterrupt(interrupt::txInterrupt);
+                reg::write(std::ref(i2cHandle_->TXDR), data);
+                waitForNotBusy();
+               // waitForInterrupt(interrupt::txComplete);
+                //stop();
+
+            }
+
+            
+            void writeRegister(std::uint8_t regAddress, std::uint8_t data, address & slaveAddress) const {
+                std::uint32_t config_ = (2 << I2C_CR2_NBYTES_Pos) | 
+                                        (slaveAddress.addressRaw_ << I2C_CR2_SADD_Pos) |
+                                        (static_cast<std::uint8_t>(slaveAddress.addressType_) << I2C_CR2_ADD10_Pos) |
+                                        (0b1 << I2C_CR2_AUTOEND_Pos) | 
+                                        (0b0 << I2C_CR2_RD_WRN_Pos);
+                                                  
+                reg::change(std::ref(i2cHandle_->CR2), I2C_CR2_NBYTES_Msk | I2C_CR2_SADD_Msk | I2C_CR2_ADD10_Msk | I2C_CR2_AUTOEND_Msk | I2C_CR2_RD_WRN_Msk, config_);
+                
+                // Clear the flags
+                reg::write(std::ref(i2cHandle_->ICR), 0xFF);
+
+                // Write each of the data bytes and wait for completion
+                start();
+                waitForInterrupt(interrupt::txInterrupt);
+                reg::write(std::ref(i2cHandle_->TXDR), regAddress);
+                waitForInterrupt(interrupt::txInterrupt);
+                reg::write(std::ref(i2cHandle_->TXDR), data);
+                waitForNotBusy();
+                
+                //stop();
+            }
+
+            void read(std::vector<std::uint8_t> & data, int size, address & slaveAddress) const {
+                if (size > 255) error::handler::hardThrow(error::code::i2c_too_large_payload);
+
+                std::uint32_t config_ = (size << I2C_CR2_NBYTES_Pos) | 
+                                        (slaveAddress.addressRaw_ << I2C_CR2_SADD_Pos) |
+                                        (static_cast<std::uint8_t>(slaveAddress.addressType_) << I2C_CR2_ADD10_Pos) |
+                                        (0b0<< I2C_CR2_AUTOEND_Pos) |
+                                        (0b1 << I2C_CR2_RD_WRN_Pos);
+                                                  
+                reg::change(std::ref(i2cHandle_->CR2), I2C_CR2_NBYTES_Msk | I2C_CR2_SADD_Msk | I2C_CR2_ADD10_Msk | I2C_CR2_AUTOEND_Msk | I2C_CR2_RD_WRN_Msk, config_);
+
+                // Clear the flags
+                reg::write(std::ref(i2cHandle_->ICR), 0xFF);
+
+                // Read the requested bytes
+                std::uint8_t val_;
+                start();
+                while (size > 0) {
+                    waitForInterrupt(interrupt::rxInterrupt);
+                    val_ = reg::read(std::ref(i2cHandle_->RXDR));
+                    data.push_back(val_);
+                    size--;
+                }
+                stop();
+                waitForNotBusy();
+            }
+
+            std::uint8_t read(address & slaveAddress) const {
+
+                std::uint32_t config_ = (1 << I2C_CR2_NBYTES_Pos) | 
+                                        (slaveAddress.addressRaw_ << I2C_CR2_SADD_Pos) |
+                                        (static_cast<std::uint8_t>(slaveAddress.addressType_) << I2C_CR2_ADD10_Pos) |
+                                        (0b0<< I2C_CR2_AUTOEND_Pos) |
+                                        (0b1 << I2C_CR2_RD_WRN_Pos);
+
+                reg::change(std::ref(i2cHandle_->CR2), I2C_CR2_NBYTES_Msk | I2C_CR2_SADD_Msk | I2C_CR2_ADD10_Msk | I2C_CR2_AUTOEND_Msk | I2C_CR2_RD_WRN_Msk, config_);
+                
+                // Clear the flags
+                reg::write(std::ref(i2cHandle_->ICR), 0xFF);
+
+                // Read the requested bytes
+                start();
+                waitForInterrupt(interrupt::rxInterrupt);
+                std::uint8_t val_ = reg::read(std::ref(i2cHandle_->RXDR));
+                stop();
+                waitForNotBusy();
+
+                return val_;
+            }
+
+
+            std::uint8_t readRegister(std::uint8_t regAddress, address & slaveAddress) const {
                 std::uint32_t config_ = (1 << I2C_CR2_NBYTES_Pos) | 
                                         (slaveAddress.addressRaw_ << I2C_CR2_SADD_Pos) |
                                         (static_cast<std::uint8_t>(slaveAddress.addressType_) << I2C_CR2_ADD10_Pos) |
@@ -208,53 +319,28 @@ namespace stmcpp::i2c {
                                         (0b0 << I2C_CR2_RD_WRN_Pos);
                                                   
                 reg::change(std::ref(i2cHandle_->CR2), I2C_CR2_NBYTES_Msk | I2C_CR2_SADD_Msk | I2C_CR2_ADD10_Msk | I2C_CR2_AUTOEND_Msk | I2C_CR2_RD_WRN_Msk, config_);
-                
+                // Clear the flags
+                reg::write(std::ref(i2cHandle_->ICR), 0xFF);
                 // Write the register address
                 start();
                 waitForInterrupt(interrupt::txInterrupt);
                 reg::write(std::ref(i2cHandle_->TXDR), regAddress);
-                waitForInterrupt(interrupt::txInterrupt);
+                waitForInterrupt(interrupt::txComplete);
                 stop();
+
+                waitForNotBusy();
+                // Clear the flags
+                reg::write(std::ref(i2cHandle_->ICR), 0xFF);
 
                 // Change the config to receive instead of transmitting
                 reg::change(std::ref(i2cHandle_->CR2), I2C_CR2_NBYTES_Msk | I2C_CR2_RD_WRN_Msk, (1 << I2C_CR2_NBYTES_Pos) | (1 << I2C_CR2_RD_WRN_Pos));
-                
+
                 // Read the requested byte
                 start();
                 waitForInterrupt(interrupt::rxInterrupt);
                 std::uint8_t val_ = reg::read(std::ref(i2cHandle_->RXDR));
                 stop();
-
-                return val_;
-            }
-
-            std::uint8_t read16bitAddress(std::uint16_t regAddress, address & slaveAddress) const {
-                
-                std::uint32_t config_ = (2 << I2C_CR2_NBYTES_Pos) | 
-                                        (slaveAddress.addressRaw_ << I2C_CR2_SADD_Pos) |
-                                        (static_cast<std::uint8_t>(slaveAddress.addressType_) << I2C_CR2_ADD10_Pos) |
-                                        (0b0<< I2C_CR2_AUTOEND_Pos) |
-                                        (0b0 << I2C_CR2_RD_WRN_Pos);
-                                                  
-                reg::change(std::ref(i2cHandle_->CR2), I2C_CR2_NBYTES_Msk | I2C_CR2_SADD_Msk | I2C_CR2_ADD10_Msk | I2C_CR2_AUTOEND_Msk | I2C_CR2_RD_WRN_Msk, config_);
-                
-                // Write the register address
-                start();
-                waitForInterrupt(interrupt::txInterrupt);
-                reg::write(std::ref(i2cHandle_->TXDR), 0x00FF & (regAddress >> 8));
-                waitForInterrupt(interrupt::txInterrupt);
-                reg::write(std::ref(i2cHandle_->TXDR), 0x00FF & regAddress);
-                waitForInterrupt(interrupt::txInterrupt);
-                stop();
-
-                // Change the config to receive instead of transmitting
-                reg::change(std::ref(i2cHandle_->CR2), I2C_CR2_NBYTES_Msk | I2C_CR2_RD_WRN_Msk, (1 << I2C_CR2_NBYTES_Pos) | (1 << I2C_CR2_RD_WRN_Pos));
-                
-                // Read the requested byte
-                start();
-                waitForInterrupt(interrupt::rxInterrupt);
-                std::uint8_t val_ = reg::read(std::ref(i2cHandle_->RXDR));
-                stop();
+                waitForNotBusy();
 
                 return val_;
             }
