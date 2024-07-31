@@ -18,6 +18,19 @@ namespace stmcpp::i2c {
     using namespace stmcpp;
     using namespace stmcpp::units;
 
+    enum class error {
+        nack,
+        bus,
+        arbitration,
+        overrun,
+        timeout,
+        payload_overflow,
+        other
+    };
+
+    static stmcpp::error::handler<error, "stmcpp::i2c"> errorHandler;
+
+
     enum class peripheral : uint32_t {
         i2c1 = I2C1_BASE, ///< I2C1 peripheral selected
         i2c2 = I2C2_BASE, ///< I2C2 peripheral selected
@@ -72,25 +85,27 @@ namespace stmcpp::i2c {
             I2C_TypeDef * const i2cHandle_ = reinterpret_cast<I2C_TypeDef *>(static_cast<std::uint32_t>(Peripheral));
 
             void waitForInterrupt(interrupt flag, duration timeout = 5000_ms) const {
-                if(!stmcpp::clock::systick::initialized()) error::handler::hardThrow(error::code::systick_used_uninitialized);
+
                 duration timestamp_ = stmcpp::clock::systick::getDuration();
 
                 while (stmcpp::clock::systick::getDuration() < (timestamp_ + timeout)) {
                     if(getInterruptFlag(flag)) { 
                         return;
                     } else if (getInterruptFlag(interrupt::nack)) {
-                        error::handler::hardThrow(error::code::i2c_nack);
+                        errorHandler.hardThrow(error::nack);
+                        return;
                     } else if (getInterruptFlag(interrupt::busError)) {
-                        error::handler::hardThrow(error::code::i2c_bus);
+                        errorHandler.hardThrow(error::bus);
+                        return;
                     } else if (getInterruptFlag(interrupt::arbitrationError)) {
-                        error::handler::hardThrow(error::code::i2c_arbitration);
+                        errorHandler.hardThrow(error::arbitration);
+                        return;
                     } else if (getInterruptFlag(interrupt::overrunError)) {
-                       //error::handler::hardThrow(error::code::i2c_overrun);
+                       errorHandler.hardThrow(error::overrun);
                        return;
                     } 
                 }
-
-                error::handler::hardThrow(error::code::i2c_timeout);
+                errorHandler.hardThrow(error::timeout);
             }
 
             void waitForNotBusy(duration timeout = 100_ms) const {
@@ -99,7 +114,7 @@ namespace stmcpp::i2c {
                 while (stmcpp::clock::systick::getDuration() < (timestamp_ + timeout)) {
                     if(!getStatusFlag(status::busy)) return;
                 }
-                error::handler::hardThrow(error::code::i2c_timeout);
+                errorHandler.hardThrow(error::timeout);
             }
 
            
@@ -188,7 +203,7 @@ namespace stmcpp::i2c {
 
             void write(std::vector<std::uint8_t> & data, address & slaveAddress) const {
                 int nbytes_ = data.size();
-                if (nbytes_ > 255) error::handler::hardThrow(error::code::i2c_too_large_payload);
+                if (nbytes_ > 255) errorHandler.hardThrow(error::payload_overflow);
                 
                 std::uint32_t config_ = (nbytes_ << I2C_CR2_NBYTES_Pos) | 
                                         (slaveAddress.addressRaw_ << I2C_CR2_SADD_Pos) |
@@ -200,7 +215,7 @@ namespace stmcpp::i2c {
                 
                 // Clear the flags
                 reg::write(std::ref(i2cHandle_->ICR), 0xFF);
-                
+
                 // Write each of the data bytes and wait for completion
                 start();
                 waitForInterrupt(interrupt::txInterrupt);
@@ -261,7 +276,7 @@ namespace stmcpp::i2c {
             }
 
             void read(std::vector<std::uint8_t> & data, int size, address & slaveAddress) const {
-                if (size > 255) error::handler::hardThrow(error::code::i2c_too_large_payload);
+                if (size > 255) errorHandler.hardThrow(error::payload_overflow);
 
                 std::uint32_t config_ = (size << I2C_CR2_NBYTES_Pos) | 
                                         (slaveAddress.addressRaw_ << I2C_CR2_SADD_Pos) |

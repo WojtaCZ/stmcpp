@@ -25,52 +25,80 @@
 
 namespace stmcpp::error {
 
-    enum class code {
-        i2c_nack,
-        i2c_bus,
-        i2c_arbitration,
-        i2c_overrun,
-        i2c_timeout,
-        i2c_too_large_payload,
-        i2c_other,
+    // Don't forget to define the globalFaultHandler!!!
+    extern "C" void globalFaultHandler(std::uint32_t hash, std::uint32_t code);
 
-        systick_used_uninitialized
+    // Hash multiplier is set experimentally
+    constexpr unsigned int HASH_MULTIPLIER = 37;
+
+    constexpr std::uint32_t moduleHash(const char * str) {
+        std::uint32_t hash_ = 0;
+
+        for (; *str != '\0'; str++){
+            hash_ = HASH_MULTIPLIER * hash_ + *str;
+        }
+        return hash_;
+    }
+
+    // This class serves as a wrapper to allow for compile time hash calculation
+    template<size_t N>
+    struct StringLiteral {
+        char value[N];
+
+        constexpr StringLiteral(const char (&str)[N]) {
+            std::copy_n(str, N, value);
+        }
     };
 
-    
-    extern "C" void globalFaultHandler(code errorCode);
+    template<typename ErrorEnum, StringLiteral ModuleName>
+    class handler {
 
-    class handler final {
+        static_assert(std::is_enum<ErrorEnum>::value, "The ErrorEnum parameter must be an enum!");
+
         private:
-            static inline code lastSoftError_;
-            static inline bool hasSoftError_ = false;
-        public:
-            handler() = delete;
-            handler(const handler &) = delete;
-            handler(handler &&) = delete;
+            // Hash function to get the module hash from its name
+            template<size_t N>
+            static constexpr std::uint32_t hashFunction (StringLiteral<N> s) {
+                std::uint32_t hash_ = 0;
 
-            static void hardThrow(code errorCode) {
-                globalFaultHandler(errorCode);
+                for (unsigned int i = 0; i < sizeof(s.value) - 1; i++) {
+                    hash_ = HASH_MULTIPLIER * hash_ + s.value[i];
+                }
+                return hash_;
             }
 
-            static void softThrow(code errorCode) {
-                lastSoftError_ = errorCode;
+            // Some statuses
+            ErrorEnum lastSoftError_ = static_cast<ErrorEnum>(0);
+            bool hasSoftError_ = false;
+            static constexpr std::uint32_t moduleHash_ = handler::hashFunction(ModuleName);
+
+
+        public:
+            constexpr void softThrow(ErrorEnum error) {
+                lastSoftError_ = error;
                 hasSoftError_ = true;
             }
 
-            static bool hasSoftError() {
+            constexpr bool hasSoftError() {
                 return hasSoftError_;
             }
 
-            static code getSoftError() {
+            constexpr ErrorEnum getSoftError() {
                 return lastSoftError_;
             }
 
-            static void clearSoftError() {
+            constexpr void clearSoftError() {
                 hasSoftError_ = false;
             }
-    };      
-} 
 
+            constexpr void hardThrow(ErrorEnum error) {
+                globalFaultHandler(moduleHash_, static_cast<std::uint32_t>(error));
+            }
+
+            constexpr std::uint32_t getHash() {
+                return moduleHash_;
+            }
+    };    
+} 
 
 #endif

@@ -24,6 +24,7 @@
 
 #include <stmcpp/register.hpp>
 #include <stmcpp/units.hpp>
+#include <stmcpp/error.hpp>
 
 #include "stm32h753xx.h"
 #include "stmcpp-config.hpp"
@@ -33,6 +34,12 @@ extern "C" void SysTick_Handler();
 namespace stmcpp::clock {
     using namespace stmcpp;
     using namespace stmcpp::units;
+
+    enum class error {
+        systick_used_uninitialized
+    };
+
+    static stmcpp::error::handler<error, "stmcpp::clock"> errorHandler;
 
     enum class peripheral : std::uint16_t {
         mdma        = (0x0000) | RCC_AHB3ENR_MDMAEN_Pos,
@@ -379,6 +386,7 @@ namespace stmcpp::clock {
             }
 
             static void waitBlocking(duration time) {
+                if(!initialized_) errorHandler.hardThrow(error::systick_used_uninitialized);
                 duration timestamp_ = resolution_ * ticks_;
                 while(getDuration() < (timestamp_ + time)){;}
             }
@@ -386,10 +394,6 @@ namespace stmcpp::clock {
             static inline void increment() {
                 ++ticks_;
             } 
-
-            static inline bool initialized() {
-                return initialized_;
-            }
 
             friend void SysTick_Handler();
     };    
