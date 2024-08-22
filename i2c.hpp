@@ -9,7 +9,6 @@
 #include <stmcpp/register.hpp>
 #include <stmcpp/units.hpp>
 #include <stmcpp/clock.hpp>
-
 #include <stmcpp/error.hpp>
 
 #include "stm32h753xx.h"
@@ -23,6 +22,11 @@ namespace stmcpp::i2c {
         bus,
         arbitration,
         overrun,
+        busy_timeout,
+        tx_empty_timeout,
+        tx_complete_timeout,
+        tx_timeout,
+        rx_timeout,
         timeout,
         payload_overflow,
         other
@@ -83,41 +87,6 @@ namespace stmcpp::i2c {
     class i2c {
         private:
             I2C_TypeDef * const i2cHandle_ = reinterpret_cast<I2C_TypeDef *>(static_cast<std::uint32_t>(Peripheral));
-
-            void waitForInterrupt(interrupt flag, duration timeout = 5000_ms) const {
-
-                duration timestamp_ = stmcpp::clock::systick::getDuration();
-
-                while (stmcpp::clock::systick::getDuration() < (timestamp_ + timeout)) {
-                    if(getInterruptFlag(flag)) { 
-                        return;
-                    } else if (getInterruptFlag(interrupt::nack)) {
-                        errorHandler.hardThrow(error::nack);
-                        return;
-                    } else if (getInterruptFlag(interrupt::busError)) {
-                        errorHandler.hardThrow(error::bus);
-                        return;
-                    } else if (getInterruptFlag(interrupt::arbitrationError)) {
-                        errorHandler.hardThrow(error::arbitration);
-                        return;
-                    } else if (getInterruptFlag(interrupt::overrunError)) {
-                       errorHandler.hardThrow(error::overrun);
-                       return;
-                    } 
-                }
-                errorHandler.hardThrow(error::timeout);
-            }
-
-            void waitForNotBusy(duration timeout = 100_ms) const {
-                duration timestamp_ = stmcpp::clock::systick::getDuration();
-
-                while (stmcpp::clock::systick::getDuration() < (timestamp_ + timeout)) {
-                    if(!getStatusFlag(status::busy)) return;
-                }
-                errorHandler.hardThrow(error::timeout);
-            }
-
-           
 
         public:
             constexpr i2c(uint8_t prescaler, uint8_t setupTime, uint8_t holdTime, uint8_t highPeriod, uint8_t lowPeriod,
@@ -218,12 +187,12 @@ namespace stmcpp::i2c {
 
                 // Write each of the data bytes and wait for completion
                 start();
-                waitForInterrupt(interrupt::txInterrupt);
+                reg::waitForBitSet(std::ref(i2cHandle_->ISR), interrupt::txInterrupt, []() { errorHandler.hardThrow(error::tx_timeout); });
                 for (std::uint8_t byte : data) {
                     reg::write(std::ref(i2cHandle_->TXDR), byte);
-                    waitForInterrupt(interrupt::txInterrupt);
+                    reg::waitForBitSet(std::ref(i2cHandle_->ISR), interrupt::txInterrupt, []() { errorHandler.hardThrow(error::tx_timeout); });
                 }
-                waitForNotBusy();
+                reg::waitForBitClear(std::ref(i2cHandle_->ISR), status::busy, []() { errorHandler.hardThrow(error::busy_timeout); });
                 //stop();
 
             }
@@ -243,10 +212,10 @@ namespace stmcpp::i2c {
 
                 // Write each of the data bytes and wait for completion
                 start();
-                waitForInterrupt(interrupt::txInterrupt);
+                reg::waitForBitSet(std::ref(i2cHandle_->ISR), interrupt::txInterrupt, []() { errorHandler.hardThrow(error::tx_timeout); });
                 reg::write(std::ref(i2cHandle_->TXDR), data);
-                waitForNotBusy();
-               // waitForInterrupt(interrupt::txComplete);
+                reg::waitForBitClear(std::ref(i2cHandle_->ISR), status::busy, []() { errorHandler.hardThrow(error::busy_timeout); });
+
                 //stop();
 
             }
@@ -266,11 +235,11 @@ namespace stmcpp::i2c {
 
                 // Write each of the data bytes and wait for completion
                 start();
-                waitForInterrupt(interrupt::txInterrupt);
+                reg::waitForBitSet(std::ref(i2cHandle_->ISR), interrupt::txInterrupt, []() { errorHandler.hardThrow(error::tx_timeout); });
                 reg::write(std::ref(i2cHandle_->TXDR), regAddress);
-                waitForInterrupt(interrupt::txInterrupt);
+                reg::waitForBitSet(std::ref(i2cHandle_->ISR), interrupt::txInterrupt, []() { errorHandler.hardThrow(error::tx_timeout); });
                 reg::write(std::ref(i2cHandle_->TXDR), data);
-                waitForNotBusy();
+                reg::waitForBitClear(std::ref(i2cHandle_->ISR), status::busy, []() { errorHandler.hardThrow(error::busy_timeout); });
                 
                 //stop();
             }
@@ -293,13 +262,13 @@ namespace stmcpp::i2c {
                 std::uint8_t val_;
                 start();
                 while (size > 0) {
-                    waitForInterrupt(interrupt::rxInterrupt);
+                    reg::waitForBitSet(std::ref(i2cHandle_->ISR), interrupt::rxInterrupt, []() { errorHandler.hardThrow(error::rx_timeout); });
                     val_ = reg::read(std::ref(i2cHandle_->RXDR));
                     data.push_back(val_);
                     size--;
                 }
                 stop();
-                waitForNotBusy();
+                reg::waitForBitClear(std::ref(i2cHandle_->ISR), status::busy, []() { errorHandler.hardThrow(error::busy_timeout); });
             }
 
             std::uint8_t read(address & slaveAddress) const {
@@ -317,10 +286,10 @@ namespace stmcpp::i2c {
 
                 // Read the requested bytes
                 start();
-                waitForInterrupt(interrupt::rxInterrupt);
+                reg::waitForBitSet(std::ref(i2cHandle_->ISR), interrupt::rxInterrupt, []() { errorHandler.hardThrow(error::rx_timeout); });
                 std::uint8_t val_ = reg::read(std::ref(i2cHandle_->RXDR));
                 stop();
-                waitForNotBusy();
+                reg::waitForBitClear(std::ref(i2cHandle_->ISR), status::busy, []() { errorHandler.hardThrow(error::busy_timeout); });
 
                 return val_;
             }
@@ -338,12 +307,12 @@ namespace stmcpp::i2c {
                 reg::write(std::ref(i2cHandle_->ICR), 0xFF);
                 // Write the register address
                 start();
-                waitForInterrupt(interrupt::txInterrupt);
+                reg::waitForBitSet(std::ref(i2cHandle_->ISR), interrupt::txInterrupt, []() { errorHandler.hardThrow(error::tx_timeout); });
                 reg::write(std::ref(i2cHandle_->TXDR), regAddress);
-                waitForInterrupt(interrupt::txComplete);
+                reg::waitForBitSet(std::ref(i2cHandle_->ISR), interrupt::txComplete, []() { errorHandler.hardThrow(error::tx_complete_timeout); });
                 stop();
 
-                waitForNotBusy();
+                reg::waitForBitClear(std::ref(i2cHandle_->ISR), status::busy, []() { errorHandler.hardThrow(error::busy_timeout); });
                 // Clear the flags
                 reg::write(std::ref(i2cHandle_->ICR), 0xFF);
 
@@ -352,10 +321,10 @@ namespace stmcpp::i2c {
 
                 // Read the requested byte
                 start();
-                waitForInterrupt(interrupt::rxInterrupt);
+                reg::waitForBitSet(std::ref(i2cHandle_->ISR), interrupt::rxInterrupt, []() { errorHandler.hardThrow(error::rx_timeout); });
                 std::uint8_t val_ = reg::read(std::ref(i2cHandle_->RXDR));
                 stop();
-                waitForNotBusy();
+                reg::waitForBitClear(std::ref(i2cHandle_->ISR), status::busy, []() { errorHandler.hardThrow(error::busy_timeout); });
 
                 return val_;
             }

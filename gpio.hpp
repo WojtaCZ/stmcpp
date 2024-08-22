@@ -123,14 +123,15 @@ namespace stmcpp::gpio{
             constexpr pin(gpio::mode mode, gpio::otype otype = gpio::otype::pushPull, gpio::speed speed = gpio::speed::low, gpio::pull pull = gpio::pull::noPull) {
                 static_assert(Pin < 16, "The pin number cannot be greater than 15!");
                
-                setMode(mode);
                 setSpeed(speed);
                 setPull(pull);
+                setMode(mode);
                 setOutputType(otype);
             }
 
             constexpr pin(gpio::mode mode, gpio::pull pull) :  pin (mode, gpio::otype::pushPull, gpio::speed::low, pull) { }
             constexpr pin(gpio::mode mode, gpio::otype otype, gpio::pull pull) :  pin (mode, otype, gpio::speed::low, pull) { }
+            constexpr pin(gpio::mode mode, gpio::speed ospeed) :  pin (mode, gpio::otype::pushPull, ospeed, gpio::pull::noPull) { }
 
             void set() const {
                 reg::write(std::ref(gpioHandle_->BSRR), 0x00000001, Pin);
@@ -195,6 +196,10 @@ namespace stmcpp::gpio{
 
             void clearInterruptFlag() const {
                 reg::set(std::ref(EXTI->PR1), 0x01, Pin);
+            }
+
+            bool getInterruptFlag() const {
+                return reg::read(std::ref(EXTI->PR1), 0x01, Pin);
             }
 
             void setInterruptEdge(gpio::interrupt::edge edge) const {

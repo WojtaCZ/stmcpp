@@ -180,9 +180,9 @@ using namespace stmcpp::units;
                 
                 // Work out the divisor and multiplier value based on the oversampling
                 constexpr std::array dividerLut_ = {1, 2, 4, 6, 8, 10, 12, 16, 32, 64, 128, 256}; 
-                constexpr std::uint32_t dividerValue_ = dividerLut_.at(static_cast<std::uint8_t>(divider));
+                std::uint32_t dividerValue_ = dividerLut_.at(static_cast<std::uint8_t>(divider));
                 constexpr std::array multiplierLut_ = {1.0f, 2.0f}; 
-                constexpr double multiplier_ = multiplierLut_.at(static_cast<std::uint8_t>(overSampling));
+                double multiplier_ = multiplierLut_.at(static_cast<std::uint8_t>(overSampling));
                 
                 // Calculate the baud rate and than round it to get the raw value
                 int rawBaud_ = (10 * multiplier_ * (periphClock.toHertz() / dividerValue_)) / speed.toBaud();
