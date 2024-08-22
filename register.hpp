@@ -22,13 +22,21 @@
 #include <cstddef>
 #include <functional>
 #include <type_traits>
+#include <functional>
+
+#include <stmcpp/units.hpp>
 
 /*
  * The following file contains the helper function templates
  * used for generic register access throughout the rest of this project.
  */
 
+namespace stmcpp::clock::systick {
+    static inline stmcpp::units::duration getDuration();
+}
+
 namespace stmcpp::reg {
+    using namespace stmcpp::units;
 
     //Use 32 bits as a register size
     using regbase = std::uint32_t;
@@ -68,6 +76,31 @@ namespace stmcpp::reg {
     template <typename A = regbase, typename M>
     constexpr void toggle(std::reference_wrapper<A> address, M mask, unsigned int bitshift = 0) {
         address.get() ^= (mask << bitshift);
+    }
+
+    template <typename A = regbase, typename M>
+    constexpr void waitForBitState(std::reference_wrapper<A> address, M mask, bool state, std::function<void()> onTimeout = nullptr, duration timeout = 1000_ms) {
+        duration timestamp_ = stmcpp::clock::systick::getDuration();
+        
+        while (stmcpp::clock::systick::getDuration() < (timestamp_ + timeout)) {
+            if(read(address, static_cast<regbase>(mask)) == state) { 
+                return;
+            }
+
+            if(onTimeout){
+                onTimeout();
+            }
+        }
+    }
+
+    template <typename A = regbase, typename M>
+    constexpr void waitForBitSet(std::reference_wrapper<A> address, M mask, std::function<void()> onTimeout = nullptr, duration timeout = 1000_ms) {
+        waitForBitState(address, mask, true, onTimeout, timeout);
+    }
+
+    template <typename A = regbase, typename M>
+    constexpr void waitForBitClear(std::reference_wrapper<A> address, M mask, std::function<void()> onTimeout = nullptr, duration timeout = 1000_ms) {
+        waitForBitState(address, mask, true, onTimeout, timeout);
     }
 }
 
