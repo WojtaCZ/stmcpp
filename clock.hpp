@@ -346,57 +346,50 @@ namespace stmcpp::clock {
         };    
     }    
     
-    class systick final {
-        private:
-            inline volatile static std::uint32_t ticks_ = 0;
-            static inline duration resolution_ = 1_ms;
-            static inline bool initialized_ = false; 
-        public:
-            systick() = delete;
-            systick(const systick &) = delete;
-            systick(systick &&) = delete;
+    namespace systick {
+        inline volatile static std::uint32_t ticks_ = 0;
+        static inline duration resolution_ = 1_ms;
+        static inline bool initialized_ = false; 
+      
+        static void init(duration resolution = 1_ms) {
+            resolution_ = resolution;
 
-            static void init(duration resolution = 1_ms) {
-                resolution_ = resolution;
+            auto reloadVal_ = ((config::sysclock.toHertz() / resolution_.freq().toHertz()) - 1);
+                
+            //Zero out the counter
+            reg::write(std::ref(SysTick->VAL), 0);
 
-                auto reloadVal_ = ((config::sysclock.toHertz() / resolution_.freq().toHertz()) - 1);
-                    
-                //Zero out the counter
-                reg::write(std::ref(SysTick->VAL), 0);
+            //Load the reload value
+            reg::write(std::ref(SysTick->LOAD), reloadVal_);
 
-                //Load the reload value
-                reg::write(std::ref(SysTick->LOAD), reloadVal_);
+            //Start the counter
+            reg::set(std::ref(SysTick->CTRL),
+                    0b1 << SysTick_CTRL_CLKSOURCE_Pos |
+                    0b1 << SysTick_CTRL_TICKINT_Pos |
+                    0b1 << SysTick_CTRL_ENABLE_Pos 
+            );
 
-                //Start the counter
-                reg::set(std::ref(SysTick->CTRL),
-                        0b1 << SysTick_CTRL_CLKSOURCE_Pos |
-                        0b1 << SysTick_CTRL_TICKINT_Pos |
-                        0b1 << SysTick_CTRL_ENABLE_Pos 
-                );
+            initialized_ = true;
+        }
 
-                initialized_ = true;
-            };
+        static inline std::uint32_t getTicks() {
+            return ticks_;
+        }
 
-            static inline std::uint32_t getTicks() {
-                return ticks_;
-            }
+        static inline duration getDuration() {
+            return resolution_ * ticks_;
+        }
 
-            static inline duration getDuration() {
-                return resolution_ * ticks_;
-            }
+        static void waitBlocking(duration time) {
+            if(!initialized_) errorHandler.hardThrow(error::systick_used_uninitialized);
+            duration timestamp_ = resolution_ * ticks_;
+            while(getDuration() < (timestamp_ + time)){;}
+        }
 
-            static void waitBlocking(duration time) {
-                if(!initialized_) errorHandler.hardThrow(error::systick_used_uninitialized);
-                duration timestamp_ = resolution_ * ticks_;
-                while(getDuration() < (timestamp_ + time)){;}
-            }
-
-            static inline void increment() {
-                ++ticks_;
-            } 
-
-            friend void SysTick_Handler();
-    };    
+        static inline void increment() {
+            ++ticks_;
+        } 
+    }   
    
 }
 
