@@ -86,7 +86,8 @@ namespace stmcpp::reg {
             if(read(address, static_cast<regbase>(mask)) == state) { 
                 return;
             }
-
+            
+            // Call the timeout handler if timeout occured
             if(onTimeout){
                 onTimeout();
             }
