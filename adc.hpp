@@ -38,6 +38,9 @@ namespace stmcpp::adc {
         disable_timeout,
         regular_stop_timeout,
         injected_stop_timeout,
+        channel_out_of_range,
+        sequence_out_of_range,
+        trigger_event_out_of_range,
         timeout
     };
 
@@ -72,13 +75,35 @@ namespace stmcpp::adc {
         differential
     };
 
+    enum class resolution {
+        eightBit = 0b111,
+        tenBit = 0b011,
+        twelweBit = 0b010,
+        fourteenBit = 0b001,
+        sixteenBit = 0b000
+    };
+
+    enum class hardwareTrigEdge {
+        none = 0b00,
+        rising = 0b01,
+        falling = 0b10,
+        both = 0b11
+    };
+
+    enum class dataManegment {
+        storeInDR = 0b00,
+        oneShotDMA = 0b01,
+        DFSDM = 0b10,
+        circularDMA = 0b11
+    };
+
     template<peripheral Peripheral>
     class adc {
         private:
             ADC_TypeDef * const adcHandle_ = reinterpret_cast<ADC_TypeDef *>(static_cast<std::uint32_t>(Peripheral));
 
         public:
-            adc() {
+            adc(resolution resolution, dataManegment dataManegment = dataManegment::storeInDR, bool regularOversampled = false, bool injectedOversampled = false, uint16_t oversampling = 0, uint8_t leftShift = 0, uint8_t rightShift = 0, bool boost = false, bool continuous = false, bool overrun = false) {
                 // Make sure to disable deep powerdown
                 reg::clear(std::ref(adcHandle_->CR), ADC_CR_DEEPPWD);
                 // Enable the ADC voltage regulator
@@ -86,7 +111,23 @@ namespace stmcpp::adc {
                 // Wait for it to be ready
                 reg::waitForBitSet(std::ref(adcHandle_->ISR), status::ldoReady, []() { errorHandler.hardThrow(error::ldo_timeout); });
 
-                
+                // Enable boost mode if needed
+                if (boost) reg::set(std::ref(adcHandle_->CR), ADC_CR_BOOST_Msk);
+
+                reg::write(std::ref(adcHandle_->CFGR),
+                    ((static_cast<uint8_t>(continuous) & 0b1) << ADC_CFGR_CONT_Pos) | 
+                    ((static_cast<uint8_t>(overrun) & 0b1) << ADC_CFGR_OVRMOD_Pos) |
+                    ((static_cast<uint8_t>(resolution) & 0b111) << ADC_CFGR_RES_Pos) |
+                    ((static_cast<uint8_t>(dataManegment) & 0b1) << ADC_CFGR_DMNGT_Pos)
+                );
+
+                reg::write(std::ref(adcHandle_->CFGR2),
+                    ((static_cast<uint8_t>(leftShift) & 0b1111) << ADC_CFGR2_LSHIFT_Pos) | 
+                    ((static_cast<uint16_t>(oversampling) & 0x3FF) << ADC_CFGR2_OVSR_Pos) |
+                    ((static_cast<uint8_t>(rightShift) & 0b111) << ADC_CFGR2_OVSS_Pos) |
+                    ((static_cast<uint8_t>(regularOversampled) & 0b1) << ADC_CFGR2_ROVSE_Pos)
+                    ((static_cast<uint8_t>(injectedOversampled) & 0b1) << ADC_CFGR2_JOVSE_Pos) 
+                );
             }
 
             void enable() const {
@@ -176,50 +217,88 @@ namespace stmcpp::adc {
                 return static_cast<bool>(reg::read(std::ref(adcHandle_->CR), ADC_CR_JADSTART)); 
             }
 
+            class channel {
+                private:
+                    uint8_t number_;
+
+                public:
+                    enum class samplingTime {
+                        oneAndHalfClocks = 0b000,
+                        twoAndHalfClocks = 0b001,
+                        eightAndHalfClocks = 0b010,
+                        sixteenAndHalfClocks = 0b011,
+                        thirtyTwoAndHalfClocks = 0b100,
+                        sixtyFourAndHalfClocks = 0b101,
+                        threeHundretEightySevenAndHalfClocks = 0b110,
+                        eightHundretTenAndHalfClocks = 0b111
+
+                    };
+
+                    channel(uint8_t number, samplingTime samplingTime) {
+                        if (number > 19) {
+                            errorHandler.hardThrow(error::channel_out_of_range);
+                            return;
+                        }
+
+                        if (number < 10) {
+                            reg::change(std::ref(adcHandle_->SMPR1), 0b111, static_cast<uint8_t>(samplingTime), number * 3);
+                        } else {
+                            reg::change(std::ref(adcHandle_->SMPR2), 0b111, static_cast<uint8_t>(samplingTime), number * 3);
+                        } 
+
+                        number_ = number;
+                    }
+
+                    uint8_t getNumber() {
+                        return number_;
+                    }
+            };
+
+            void setupRegularSequence(std::vector<channel> sequence, std::uint8_t triggerEvent = 0, hardwareTrigEdge edge = hardwareTrigEdge::none){
+                if (sequence.size() > 16) {
+                    errorHandler.hardThrow(error::sequence_out_of_range);
+                    return;
+                }
+
+                reg::change(std::ref(adcHandle_->CFGR), 0b11, static_cast<uint8_t>(edge), ADC_CFGR_EXTEN_Pos);
+                reg::change(std::ref(adcHandle_->CFGR), 0b11111, static_cast<uint8_t>(triggerEvent), ADC_CFGR_EXTSEL_Pos);
+
+                // Set up the number of channels in the sequence
+                reg::write(std::ref(adcHandle_->SQR1), sequence.size());
+
+                for(int i = 0; i < sequence.size(); i++) {
+                    if (i < 4){
+                        reg::change(std::ref(adcHandle_->SQR1), 0b1111, ch.getNumber(), (i + 1) * 6);
+                    } else if (i < 9) {
+                        reg::change(std::ref(adcHandle_->SQR2), 0b1111, ch.getNumber(), (i - 4) * 6);
+                    } else if (i < 14) {
+                        reg::change(std::ref(adcHandle_->SQR3), 0b1111, ch.getNumber(), (i - 9) * 6);
+                    } else {
+                        reg::change(std::ref(adcHandle_->SQR3), 0b1111, ch.getNumber(), (i - 14) * 6);
+                    }
+                }
+            }
+
+            void setupInjectedSequence(std::vector<channel> sequence, std::uint8_t triggerEvent = 0, hardwareTrigEdge edge = hardwareTrigEdge::none){
+                if (sequence.size() > 4) {
+                    errorHandler.hardThrow(error::sequence_out_of_range);
+                    return;
+                }
+
+                if (triggerEvent > 31) {
+                    errorHandler.hardThrow(error::trigger_event_out_of_range);
+                    return;
+                }
+
+                // Set up the number of channels in the sequence and trigger event
+                reg::write(std::ref(adcHandle_->JSQR), 0b11, sequence.size() | (triggerEvent << ADC_JSQR_JEXTSEL_Pos) | (static_cast<uint8_t>(edge) << ADC_JSQR_JEXTEN_Pos));
+                for(int i = 0; i < sequence.size(); i++) {
+                    reg::change(std::ref(adcHandle_->SQR1), 0b1111, ch.getNumber(), (i * 6) + 9);
+                }
+            }
 
 
     };
-
-    namespace channel {
-        enum class channel {
-            ch0,
-            ch1,
-            ch2,
-            ch3,
-            ch4,
-            ch5,
-            ch6,
-            ch7,
-            ch8,
-            ch9,
-            ch10,
-            ch11,
-            ch12,
-            ch13,
-            ch14,
-            ch15
-        };
-
-        enum class oversampling {
-            oneAndHalfClocks = 0b000,
-            twoAndHalfClocks = 0b001,
-            eightAndHalfClocks = 0b010,
-            sixteenAndHalfClocks = 0b011,
-            thirtyTwoAndHalfClocks = 0b100,
-            sixtyFourAndHalfClocks = 0b101,
-            threeHundretEightySevenAndHalfClocks = 0b110,
-            eightHundretTenAndHalfClocks = 0b111
-
-        };
-
-        template<channel Channel>
-        class channel {
-            channel() {
-
-            }
-        };
-
-    }
 }
 
 #endif
