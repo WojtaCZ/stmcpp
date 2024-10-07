@@ -36,7 +36,8 @@ namespace stmcpp::clock {
     using namespace stmcpp::units;
 
     enum class error {
-        systick_used_uninitialized
+        systick_used_uninitialized,
+        pll_lock_timeout
     };
 
     static stmcpp::error::handler<error, "stmcpp::clock"> errorHandler;
@@ -359,10 +360,10 @@ namespace stmcpp::clock {
         inline /*static*/ duration resolution_ = 1_ms;
         inline /*volatile static*/ bool initialized_ = false; 
       
-        static void init(duration resolution = 1_ms) {
+        static void enable(frequency sysclock, duration resolution = 1_ms) {
             resolution_ = resolution;
 
-            auto reloadVal_ = ((config::sysclock.toHertz() / resolution_.freq().toHertz()) - 1);
+            auto reloadVal_ = ((sysclock.toHertz() / resolution_.freq().toHertz()) - 1);
                 
             //Zero out the counter
             reg::write(std::ref(SysTick->VAL), 0);
@@ -380,6 +381,16 @@ namespace stmcpp::clock {
             initialized_ = true;
         }
 
+        static void disable() {
+            reg::write(std::ref(SysTick->CTRL), 0);
+            initialized_ = false;
+        }
+
+        static void reconfigure(frequency sysclock, duration resolution = 1_ms){
+            disable();
+            enable(sysclock, resolution);
+        } 
+
         static inline std::uint32_t getTicks() {
             return ticks_;
         }
@@ -392,21 +403,6 @@ namespace stmcpp::clock {
             if(!initialized_) errorHandler.hardThrow(error::systick_used_uninitialized);
             duration timestamp_ = resolution_ * ticks_;
             while(getDuration() < (timestamp_ + time)){;}
-        }
-
-        static void waitForTrue(bool condition, std::function<void()> onTimeout = nullptr, duration timeout = 1000_ms){
-            duration timestamp_ = stmcpp::clock::systick::getDuration();
-
-            while (stmcpp::clock::systick::getDuration() < (timestamp_ + timeout)) {
-                if(condition) { 
-                    return;
-                }
-            }
-            
-            // Call the timeout handler if timeout occured
-            if(onTimeout){
-                onTimeout();
-            }
         }
 
         static inline void increment() {
