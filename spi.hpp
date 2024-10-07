@@ -269,6 +269,22 @@ namespace stmcpp::spi {
                     reg::clear(std::ref(spiHandle_->CFG1), SPI_CFG1_TXDMAEN);
                 }
 
+                void enableIoSwap () const {
+                    reg::set(std::ref(spiHandle_->CFG2), SPI_CFG2_IOSWP);
+                }
+
+                void disableIoSwap () const {
+                    reg::clear(std::ref(spiHandle_->CFG2), SPI_CFG2_IOSWP);
+                }
+
+                 void enableSoftwareSS () const {
+                    reg::set(std::ref(spiHandle_->CFG2), SPI_CFG2_SSM);
+                }
+
+                void disableSoftwareSS () const {
+                    reg::clear(std::ref(spiHandle_->CFG2), SPI_CFG2_SSM);
+                }
+
                 void enableInterrupt(interrupt interrupt) const {
                     //All these three interrupts are affected by this bit
                     if (interrupt == interrupt::endOfTransfer || interrupt == interrupt::suspend || interrupt == interrupt::txComplete) {

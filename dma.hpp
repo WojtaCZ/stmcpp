@@ -120,6 +120,12 @@ namespace stmcpp::dma{
                 bool doublebuffer = false, bool bufferedtransfers = false, flowController flowController = flowController::dma,
                 burstsize pburst = burstsize::single, burstsize mburst = burstsize::single
                 ) {
+
+                reg::write(std::ref(streamHandle_->PAR), paddress);
+                reg::write(std::ref(streamHandle_->M0AR), m0address);
+                reg::write(std::ref(streamHandle_->M1AR), m1address);
+                reg::write(std::ref(streamHandle_->NDTR), numofdata);
+            
                 reg::write(std::ref(streamHandle_->CR),
                     //Interrupts are not enabled here and the channel is not yet being enabled
                     ((static_cast<std::uint8_t>(flowController) & 0b1) << DMA_SxCR_PFCTRL_Pos) |
@@ -138,10 +144,6 @@ namespace stmcpp::dma{
                     ((static_cast<std::uint8_t>(mburst) & 0b11) << DMA_SxCR_MBURST_Pos)  
                 );
 
-                reg::write(std::ref(streamHandle_->PAR), paddress);
-                reg::write(std::ref(streamHandle_->M0AR), m0address);
-                reg::write(std::ref(streamHandle_->M1AR), m1address);
-                reg::write(std::ref(streamHandle_->NDTR), numofdata);
             }
 
             void enable() const {
@@ -154,6 +156,14 @@ namespace stmcpp::dma{
 
             void setTargetMemory(targetMem memory) const {
                 reg::change(std::ref(streamHandle_->CR), 0x01, static_cast<std::uint8_t>(memory), DMA_SxCR_CT_Pos);
+            }
+
+            uint8_t getTargetMemory() const {
+                return reg::read(std::ref(streamHandle_->CR), 0x01, DMA_SxCR_CT_Pos);
+            }
+
+            void setNumberOfData(uint16_t numofdata) const {
+                reg::write(std::ref(streamHandle_->NDTR), numofdata);
             }
 
             void enableInterrupt(const std::vector<interrupt> interrupts) const {
@@ -338,6 +348,14 @@ namespace stmcpp::dma{
 
             fifoStat getFifoStatus() const {
                 return static_cast<fifoStat>(reg::read(std::ref(streamHandle_->FCR), 0x07, DMA_SxFCR_FS_Pos));
+            }
+
+            void enableDoubleBuffer() const {
+                reg::set(std::ref(streamHandle_->CR), DMA_SxCR_DBM);
+            }
+
+            void disableDoubleBuffer() const {
+                reg::clear(std::ref(streamHandle_->CR), DMA_SxCR_DBM);
             }
     };
 }

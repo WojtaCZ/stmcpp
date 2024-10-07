@@ -132,6 +132,7 @@ namespace stmcpp::gpio{
             constexpr pin(gpio::mode mode, gpio::pull pull) :  pin (mode, gpio::otype::pushPull, gpio::speed::low, pull) { }
             constexpr pin(gpio::mode mode, gpio::otype otype, gpio::pull pull) :  pin (mode, otype, gpio::speed::low, pull) { }
             constexpr pin(gpio::mode mode, gpio::speed ospeed) :  pin (mode, gpio::otype::pushPull, ospeed, gpio::pull::noPull) { }
+            constexpr pin(gpio::mode mode, gpio::speed ospeed, gpio::pull pull) :  pin (mode, gpio::otype::pushPull, ospeed, pull) { }
 
             void set() const {
                 reg::write(std::ref(gpioHandle_->BSRR), 0x00000001, Pin);

@@ -78,31 +78,47 @@ namespace stmcpp::reg {
         address.get() ^= (mask << bitshift);
     }
 
-    template <typename A = regbase, typename M>
+    /*template <typename A = regbase, typename M>
     constexpr void waitForBitState(std::reference_wrapper<A> address, M mask, bool state, std::function<void()> onTimeout = nullptr, duration timeout = 1000_ms) {
         duration timestamp_ = stmcpp::clock::systick::getDuration();
         
         while (stmcpp::clock::systick::getDuration() < (timestamp_ + timeout)) {
-            if(read(address, static_cast<regbase>(mask)) == state) { 
+            if(static_cast<bool>(read(address, static_cast<regbase>(mask))) == state) { 
                 return;
             }
-            
-            // Call the timeout handler if timeout occured
-            if(onTimeout){
-                onTimeout();
+        }
+        // Call the timeout handler if timeout occured
+        if(onTimeout){
+            onTimeout();
+        }
+    }*/
+
+    template <typename A = regbase, typename M, typename V>
+    constexpr void waitForBitsEqual(std::reference_wrapper<A> address, M mask, V value, std::function<void()> onTimeout = nullptr, duration timeout = 1000_ms) {
+        duration timestamp_ = stmcpp::clock::systick::getDuration();
+        
+        while (stmcpp::clock::systick::getDuration() < (timestamp_ + timeout)) {
+            if(read(address, static_cast<regbase>(mask)) == static_cast<regbase>(value)) { 
+                return;
             }
+        }
+        // Call the timeout handler if timeout occured
+        if(onTimeout){
+            onTimeout();
         }
     }
 
     template <typename A = regbase, typename M>
     constexpr void waitForBitSet(std::reference_wrapper<A> address, M mask, std::function<void()> onTimeout = nullptr, duration timeout = 1000_ms) {
-        waitForBitState(address, mask, true, onTimeout, timeout);
+        waitForBitsEqual(address, mask, mask, onTimeout, timeout);
     }
 
     template <typename A = regbase, typename M>
     constexpr void waitForBitClear(std::reference_wrapper<A> address, M mask, std::function<void()> onTimeout = nullptr, duration timeout = 1000_ms) {
-        waitForBitState(address, mask, true, onTimeout, timeout);
+        waitForBitsEqual(address, mask, 0, onTimeout, timeout);
     }
+
+
 }
 
 #endif

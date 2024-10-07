@@ -301,9 +301,9 @@ namespace stmcpp::clock {
 
                     static_assert(M >= clock::pll::range_div_m.first && M <= clock::pll::range_div_m.second, "The M divider is out of range.");
                     static_assert(N >= clock::pll::range_div_n.first && N <= clock::pll::range_div_n.second, "The N divider is out of range.");
-                    static_assert(P >= clock::pll::range_div_p.first && P <= clock::pll::range_div_p.second, "The P divider is out of range.");
-                    static_assert(Q >= clock::pll::range_div_q.first && Q <= clock::pll::range_div_q.second, "The Q divider is out of range.");
-                    static_assert(R >= clock::pll::range_div_r.first && R <= clock::pll::range_div_r.second, "The R divider is out of range.");
+                    static_assert((P >= clock::pll::range_div_p.first && P <= clock::pll::range_div_p.second) || P == 0, "The P divider is out of range.");
+                    static_assert((Q >= clock::pll::range_div_q.first && Q <= clock::pll::range_div_q.second) || Q == 0, "The Q divider is out of range.");
+                    static_assert((R >= clock::pll::range_div_r.first && R <= clock::pll::range_div_r.second) || R == 0, "The R divider is out of range.");
 
                     static_assert(!((Peripheral == peripheral::pll1) && (P % 2)), "The P divider for PLL1 must be an even number!");
 
@@ -322,13 +322,21 @@ namespace stmcpp::clock {
                         static_cast<uint8_t>(inputRange) << RCC_PLLCFGR_PLL1RGE_Pos |
                         static_cast<uint8_t>(vcoRange) << RCC_PLLCFGR_PLL1VCOSEL_Pos 
                     ), 4 * getPllIdx_());
+                    
+                    reg::write(std::ref(*pllCfgrAdd_), (N - 1) << RCC_PLL1DIVR_N1_Pos);
 
-                    reg::write(std::ref(*pllCfgrAdd_), 
-                        (N - 1) << RCC_PLL1DIVR_N1_Pos |
-                        (P - 1) << RCC_PLL1DIVR_P1_Pos |
-                        (Q - 1) << RCC_PLL1DIVR_Q1_Pos |
-                        (R - 1) << RCC_PLL1DIVR_R1_Pos 
-                    );
+                    if constexpr (P != 0) {
+                        reg::set(std::ref(*pllCfgrAdd_), (P - 1) << RCC_PLL1DIVR_P1_Pos);
+                    } else stmcpp::reg::clear(std::ref(RCC->PLLCFGR), RCC_PLLCFGR_DIVP1EN, 3 * getPllIdx_());
+                    
+                    if constexpr (Q != 0) {
+                        reg::set(std::ref(*pllCfgrAdd_), (Q - 1) << RCC_PLL1DIVR_Q1_Pos);
+                    } else stmcpp::reg::clear(std::ref(RCC->PLLCFGR), RCC_PLLCFGR_DIVQ1EN, 3 * getPllIdx_());
+
+                    if constexpr (R != 0) {
+                        reg::set(std::ref(*pllCfgrAdd_), (R - 1) << RCC_PLL1DIVR_R1_Pos);
+                    } else stmcpp::reg::clear(std::ref(RCC->PLLCFGR), RCC_PLLCFGR_DIVR1EN, 3 * getPllIdx_());
+
                 };
 
                 void enable() const {
@@ -347,9 +355,9 @@ namespace stmcpp::clock {
     }    
     
     namespace systick {
-        inline volatile static std::uint32_t ticks_ = 0;
-        static inline duration resolution_ = 1_ms;
-        static inline bool initialized_ = false; 
+        inline volatile /*static*/ std::uint32_t ticks_ = 0;
+        inline /*static*/ duration resolution_ = 1_ms;
+        inline /*volatile static*/ bool initialized_ = false; 
       
         static void init(duration resolution = 1_ms) {
             resolution_ = resolution;
@@ -384,6 +392,21 @@ namespace stmcpp::clock {
             if(!initialized_) errorHandler.hardThrow(error::systick_used_uninitialized);
             duration timestamp_ = resolution_ * ticks_;
             while(getDuration() < (timestamp_ + time)){;}
+        }
+
+        static void waitForTrue(bool condition, std::function<void()> onTimeout = nullptr, duration timeout = 1000_ms){
+            duration timestamp_ = stmcpp::clock::systick::getDuration();
+
+            while (stmcpp::clock::systick::getDuration() < (timestamp_ + timeout)) {
+                if(condition) { 
+                    return;
+                }
+            }
+            
+            // Call the timeout handler if timeout occured
+            if(onTimeout){
+                onTimeout();
+            }
         }
 
         static inline void increment() {

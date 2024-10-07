@@ -66,7 +66,7 @@ namespace stmcpp::dac {
         noWave      = 0b00,
         noise       = 0b01,
         triangle    = 0b10
-    }
+    };
 
     enum class waveAmplitude {
         bit1  = 0b0000,
@@ -81,25 +81,25 @@ namespace stmcpp::dac {
         bit10 = 0b1001,
         bit11 = 0b1010,
         bit12 = 0b1011      
-    }
+    };
 
     enum class bufferMode {
         externalBuffered = 0b000,
         externalInternalBuffered = 0b001,
         externalUnbuffered = 0b010,
         internalUnuffered = 0b011
-    }
+    };
 
     enum class mode {
         normal = 0b0000,
         sampleAndHold = 0b1000
-    }
+    };
 
     enum class status {
         busy = DAC_SR_BWST1,
         calibration = DAC_SR_CAL_FLAG1,
         underrun = DAC_SR_DMAUDR1
-    }
+    };
 
     template<channel Channel>
     class dac {
@@ -110,15 +110,15 @@ namespace stmcpp::dac {
                     reg::write(std::ref(DAC1->CR), 
                         (static_cast<uint32_t>(triggerEnable) << DAC_CR_TEN1_Pos) | 
                         (static_cast<uint32_t>(trigger) << DAC_CR_TSEL1_Pos) | 
-                        (static_cast<uint32_t>(waveGeneration) << DAC_CR_WAVE1_Pos) | 
-                        (static_cast<uint32_t>(waveAmplitude) << DAC_CR_MAMP1_Pos)
+                        (static_cast<uint32_t>(generation) << DAC_CR_WAVE1_Pos) | 
+                        (static_cast<uint32_t>(amplitude) << DAC_CR_MAMP1_Pos)
                     );
                 } else {
                     reg::write(std::ref(DAC1->CR), 
                         (static_cast<uint32_t>(triggerEnable) << DAC_CR_TEN2_Pos) | 
                         (static_cast<uint32_t>(trigger) << DAC_CR_TSEL2_Pos) | 
-                        (static_cast<uint32_t>(waveGeneration) << DAC_CR_WAVE2_Pos) | 
-                        (static_cast<uint32_t>(waveAmplitude) << DAC_CR_MAMP2_Pos)
+                        (static_cast<uint32_t>(generation) << DAC_CR_WAVE2_Pos) | 
+                        (static_cast<uint32_t>(amplitude) << DAC_CR_MAMP2_Pos)
                     );
                 }
 
@@ -171,8 +171,8 @@ namespace stmcpp::dac {
 
             bool getStatusFlag(status flag) {
                 if constexpr (Channel == channel::ch1) {
-                    return static_cast<bool>(reg::read(std::ref(DAC->SR), static_cast<std::uint32_t>(flag)));
-                } else return static_cast<bool>(reg::read(std::ref(DAC->SR), static_cast<std::uint32_t>(flag) << 16));
+                    return static_cast<bool>(reg::read(std::ref(DAC1->SR), static_cast<std::uint32_t>(flag)));
+                } else return static_cast<bool>(reg::read(std::ref(DAC1->SR), static_cast<std::uint32_t>(flag) << 16));
             }
 
             void calibrate() {

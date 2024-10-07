@@ -125,7 +125,7 @@ namespace stmcpp::adc {
                     ((static_cast<uint8_t>(leftShift) & 0b1111) << ADC_CFGR2_LSHIFT_Pos) | 
                     ((static_cast<uint16_t>(oversampling) & 0x3FF) << ADC_CFGR2_OVSR_Pos) |
                     ((static_cast<uint8_t>(rightShift) & 0b111) << ADC_CFGR2_OVSS_Pos) |
-                    ((static_cast<uint8_t>(regularOversampled) & 0b1) << ADC_CFGR2_ROVSE_Pos)
+                    ((static_cast<uint8_t>(regularOversampled) & 0b1) << ADC_CFGR2_ROVSE_Pos) |
                     ((static_cast<uint8_t>(injectedOversampled) & 0b1) << ADC_CFGR2_JOVSE_Pos) 
                 );
             }
@@ -268,13 +268,13 @@ namespace stmcpp::adc {
 
                 for(int i = 0; i < sequence.size(); i++) {
                     if (i < 4){
-                        reg::change(std::ref(adcHandle_->SQR1), 0b1111, ch.getNumber(), (i + 1) * 6);
+                        reg::change(std::ref(adcHandle_->SQR1), 0b1111, sequence.at(i).getNumber(), (i + 1) * 6);
                     } else if (i < 9) {
-                        reg::change(std::ref(adcHandle_->SQR2), 0b1111, ch.getNumber(), (i - 4) * 6);
+                        reg::change(std::ref(adcHandle_->SQR2), 0b1111, sequence.at(i).getNumber(), (i - 4) * 6);
                     } else if (i < 14) {
-                        reg::change(std::ref(adcHandle_->SQR3), 0b1111, ch.getNumber(), (i - 9) * 6);
+                        reg::change(std::ref(adcHandle_->SQR3), 0b1111, sequence.at(i).getNumber(), (i - 9) * 6);
                     } else {
-                        reg::change(std::ref(adcHandle_->SQR3), 0b1111, ch.getNumber(), (i - 14) * 6);
+                        reg::change(std::ref(adcHandle_->SQR3), 0b1111, sequence.at(i).getNumber(), (i - 14) * 6);
                     }
                 }
             }
@@ -293,7 +293,7 @@ namespace stmcpp::adc {
                 // Set up the number of channels in the sequence and trigger event
                 reg::write(std::ref(adcHandle_->JSQR), 0b11, sequence.size() | (triggerEvent << ADC_JSQR_JEXTSEL_Pos) | (static_cast<uint8_t>(edge) << ADC_JSQR_JEXTEN_Pos));
                 for(int i = 0; i < sequence.size(); i++) {
-                    reg::change(std::ref(adcHandle_->SQR1), 0b1111, ch.getNumber(), (i * 6) + 9);
+                    reg::change(std::ref(adcHandle_->SQR1), 0b1111, sequence.at(i).getNumber(), (i * 6) + 9);
                 }
             }
 
