@@ -129,14 +129,14 @@ namespace stmcpp::dac {
         
             void enable() {
                 if constexpr (Channel == channel::ch1) {
-                    reg::set(std::ref(DAC1->CR), DAC_CR_CEN1);
-                } else reg::set(std::ref(DAC1->CR), DAC_CR_CEN2);
+                    reg::set(std::ref(DAC1->CR), DAC_CR_EN1);
+                } else reg::set(std::ref(DAC1->CR), DAC_CR_EN2);
             }
 
             void disable() {
                 if constexpr (Channel == channel::ch1) {
-                    reg::clear(std::ref(DAC1->CR), DAC_CR_CEN1);
-                } else reg::clear(std::ref(DAC1->CR), DAC_CR_CEN2);
+                    reg::clear(std::ref(DAC1->CR), DAC_CR_EN1);
+                } else reg::clear(std::ref(DAC1->CR), DAC_CR_EN2);
             }
 
             void enableUnderrunInterrupt() {
@@ -174,20 +174,6 @@ namespace stmcpp::dac {
                     return static_cast<bool>(reg::read(std::ref(DAC1->SR), static_cast<std::uint32_t>(flag)));
                 } else return static_cast<bool>(reg::read(std::ref(DAC1->SR), static_cast<std::uint32_t>(flag) << 16));
             }
-
-            void calibrate() {
-
-                // Disable the channel
-                disable();
-
-                // Start the calibration
-                if constexpr (Channel == channel::ch1) {
-                    reg::clear(std::ref(DAC1->CR), DAC_CR_CEN1);
-                } else reg::clear(std::ref(DAC1->CR), DAC_CR_CEN2);
-            }
-
-             
-
 
     };
 }

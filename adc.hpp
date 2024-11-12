@@ -97,6 +97,43 @@ namespace stmcpp::adc {
         circularDMA = 0b11
     };
 
+    class channel {
+        public:
+            enum class samplingTime {
+                oneAndHalfClocks = 0b000,
+                twoAndHalfClocks = 0b001,
+                eightAndHalfClocks = 0b010,
+                sixteenAndHalfClocks = 0b011,
+                thirtyTwoAndHalfClocks = 0b100,
+                sixtyFourAndHalfClocks = 0b101,
+                threeHundretEightySevenAndHalfClocks = 0b110,
+                eightHundretTenAndHalfClocks = 0b111
+
+            };
+
+        private:
+            uint8_t number_;
+            samplingTime samplingTime_;
+            
+        public:
+            constexpr channel(uint8_t number, samplingTime samplingTime) : samplingTime_{samplingTime} {
+                /*if (number > 19) {
+                    errorHandler.hardThrow(error::channel_out_of_range);
+                    return;
+                }*/
+
+                number_ = number;
+            }
+
+            uint8_t getNumber() {
+                return number_;
+            }
+
+            samplingTime getSamplingTime(){
+                return samplingTime_;
+            }
+    };
+
     template<peripheral Peripheral>
     class adc {
         private:
@@ -217,44 +254,7 @@ namespace stmcpp::adc {
                 return static_cast<bool>(reg::read(std::ref(adcHandle_->CR), ADC_CR_JADSTART)); 
             }
 
-            class channel {
-                private:
-                    uint8_t number_;
-
-                public:
-                    enum class samplingTime {
-                        oneAndHalfClocks = 0b000,
-                        twoAndHalfClocks = 0b001,
-                        eightAndHalfClocks = 0b010,
-                        sixteenAndHalfClocks = 0b011,
-                        thirtyTwoAndHalfClocks = 0b100,
-                        sixtyFourAndHalfClocks = 0b101,
-                        threeHundretEightySevenAndHalfClocks = 0b110,
-                        eightHundretTenAndHalfClocks = 0b111
-
-                    };
-
-                    channel(uint8_t number, samplingTime samplingTime) {
-                        if (number > 19) {
-                            errorHandler.hardThrow(error::channel_out_of_range);
-                            return;
-                        }
-
-                        if (number < 10) {
-                            reg::change(std::ref(adcHandle_->SMPR1), 0b111, static_cast<uint8_t>(samplingTime), number * 3);
-                        } else {
-                            reg::change(std::ref(adcHandle_->SMPR2), 0b111, static_cast<uint8_t>(samplingTime), number * 3);
-                        } 
-
-                        number_ = number;
-                    }
-
-                    uint8_t getNumber() {
-                        return number_;
-                    }
-            };
-
-            void setupRegularSequence(std::vector<channel> sequence, std::uint8_t triggerEvent = 0, hardwareTrigEdge edge = hardwareTrigEdge::none){
+            void setupRegularSequence(std::vector<channel> & sequence, std::uint8_t triggerEvent = 0, hardwareTrigEdge edge = hardwareTrigEdge::none){
                 if (sequence.size() > 16) {
                     errorHandler.hardThrow(error::sequence_out_of_range);
                     return;
@@ -266,20 +266,37 @@ namespace stmcpp::adc {
                 // Set up the number of channels in the sequence
                 reg::write(std::ref(adcHandle_->SQR1), sequence.size());
 
-                for(int i = 0; i < sequence.size(); i++) {
+                reg::write(std::ref(adcHandle_->PCSEL), 0);
+
+                for(size_t i = 0; i < sequence.size(); i++) {
+                    channel::samplingTime channelSamplingTime_ = sequence.at(i).getSamplingTime();
+                    std::uint8_t  channelNumber_ = sequence.at(i).getNumber();
+
                     if (i < 4){
-                        reg::change(std::ref(adcHandle_->SQR1), 0b1111, sequence.at(i).getNumber(), (i + 1) * 6);
+                        reg::change(std::ref(adcHandle_->SQR1), 0b11111, channelNumber_, (i + 1) * 6);
                     } else if (i < 9) {
-                        reg::change(std::ref(adcHandle_->SQR2), 0b1111, sequence.at(i).getNumber(), (i - 4) * 6);
+                        reg::change(std::ref(adcHandle_->SQR2), 0b11111, channelNumber_, (i - 4) * 6);
                     } else if (i < 14) {
-                        reg::change(std::ref(adcHandle_->SQR3), 0b1111, sequence.at(i).getNumber(), (i - 9) * 6);
+                        reg::change(std::ref(adcHandle_->SQR3), 0b11111, channelNumber_, (i - 9) * 6);
                     } else {
-                        reg::change(std::ref(adcHandle_->SQR3), 0b1111, sequence.at(i).getNumber(), (i - 14) * 6);
+                        reg::change(std::ref(adcHandle_->SQR4), 0b11111, channelNumber_, (i - 14) * 6);
                     }
+
+                    if (channelNumber_ < 10) {
+                        reg::change(std::ref(adcHandle_->SMPR1), 0b111, static_cast<uint8_t>(channelSamplingTime_), channelNumber_ * 3);
+                    } else {
+                        reg::change(std::ref(adcHandle_->SMPR2), 0b111, static_cast<uint8_t>(channelSamplingTime_), (channelNumber_ - 10) * 3);
+                    } 
+
+                    reg::set(std::ref(adcHandle_->PCSEL), 0b1, channelNumber_);
+
                 }
             }
 
-            void setupInjectedSequence(std::vector<channel> sequence, std::uint8_t triggerEvent = 0, hardwareTrigEdge edge = hardwareTrigEdge::none){
+            void setupInjectedSequence(std::vector<channel> & sequence, std::uint8_t triggerEvent = 0, hardwareTrigEdge edge = hardwareTrigEdge::none){
+                
+                reg::write(std::ref(adcHandle_->PCSEL), 0);
+
                 if (sequence.size() > 4) {
                     errorHandler.hardThrow(error::sequence_out_of_range);
                     return;
@@ -293,7 +310,8 @@ namespace stmcpp::adc {
                 // Set up the number of channels in the sequence and trigger event
                 reg::write(std::ref(adcHandle_->JSQR), 0b11, sequence.size() | (triggerEvent << ADC_JSQR_JEXTSEL_Pos) | (static_cast<uint8_t>(edge) << ADC_JSQR_JEXTEN_Pos));
                 for(int i = 0; i < sequence.size(); i++) {
-                    reg::change(std::ref(adcHandle_->SQR1), 0b1111, sequence.at(i).getNumber(), (i * 6) + 9);
+                    reg::change(std::ref(adcHandle_->JSQR), 0b11111, sequence.at(i).getNumber(), (i * 6) + 9);
+                    reg::set(std::ref(adcHandle_->PCSEL), 0b1, sequence.at(i).getNumber());
                 }
             }
 

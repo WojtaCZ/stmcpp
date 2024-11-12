@@ -19,6 +19,7 @@
 #define STMCPP_FAULT_H
 
 #include <string>
+#include <algorithm>
 #include <vector>
 #include <cstdint>
 #include <cstddef>
