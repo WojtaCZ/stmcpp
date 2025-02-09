@@ -171,21 +171,21 @@ namespace stmcpp::dma{
                 std::uint8_t mask_ = 0;
 
                 for (auto i : interrupts) {
-                    if (i == dma::interrupt::fifoError) {
+                    if (i == interrupt::fifoError) {
                         //If the fifo interrupt should be enabled, set it right away
                         reg::set(std::ref(streamHandle_->FCR), DMA_SxFCR_FEIE);
                     } else {
                         switch (i) {
-                            case dma::interrupt::transferHalfComplete:
+                            case interrupt::transferHalfComplete:
                                 mask_ |= DMA_SxCR_HTIE;
                                 break;
-                            case dma::interrupt::transferComplete:
+                            case interrupt::transferComplete:
                                 mask_ |= DMA_SxCR_TCIE;
                                 break;
-                            case dma::interrupt::transferError:
+                            case interrupt::transferError:
                                 mask_ |= DMA_SxCR_TEIE;
                                 break;
-                            case dma::interrupt::directModeError:
+                            case interrupt::directModeError:
                                 mask_ |= DMA_SxCR_DMEIE;
                                 break;
                             default:
@@ -256,7 +256,7 @@ namespace stmcpp::dma{
             }
 
             void disableInterrupt(interrupt interrupt) const {
-                if (interrupt == dma::interrupt::fifoError) {
+                if (interrupt == interrupt::fifoError) {
                     //If the fifo interrupt should be enabled, set it
                     reg::clear(std::ref(streamHandle_->FCR), DMA_SxFCR_FEIE);
                 } else {
@@ -286,25 +286,25 @@ namespace stmcpp::dma{
                         reg::set(std::ref(dmaHandle_->LIFCR), static_cast<uint32_t>(interrupt), 0);
                         break;
                     case stream::stream1:
-                        reg::set(std::ref(dmaHandle_->LIFCR), static_cast<uint32_t>(interrupt), 5);
+                        reg::set(std::ref(dmaHandle_->LIFCR), static_cast<uint32_t>(interrupt), 6);
                         break;
                     case stream::stream2:
-                        reg::set(std::ref(dmaHandle_->LIFCR), static_cast<uint32_t>(interrupt), 10);
+                        reg::set(std::ref(dmaHandle_->LIFCR), static_cast<uint32_t>(interrupt), 16);
                         break;
                     case stream::stream3:
-                        reg::set(std::ref(dmaHandle_->LIFCR), static_cast<uint32_t>(interrupt), 15);
+                        reg::set(std::ref(dmaHandle_->LIFCR), static_cast<uint32_t>(interrupt), 22);
                         break;
                     case stream::stream4:
                         reg::set(std::ref(dmaHandle_->HIFCR), static_cast<uint32_t>(interrupt), 0);
                         break;
                     case stream::stream5:
-                        reg::set(std::ref(dmaHandle_->HIFCR), static_cast<uint32_t>(interrupt), 5);
+                        reg::set(std::ref(dmaHandle_->HIFCR), static_cast<uint32_t>(interrupt), 6);
                         break;
                     case stream::stream6:
-                        reg::set(std::ref(dmaHandle_->HIFCR), static_cast<uint32_t>(interrupt), 10);
+                        reg::set(std::ref(dmaHandle_->HIFCR), static_cast<uint32_t>(interrupt), 16);
                         break;
                     case stream::stream7:
-                        reg::set(std::ref(dmaHandle_->HIFCR), static_cast<uint32_t>(interrupt), 15);
+                        reg::set(std::ref(dmaHandle_->HIFCR), static_cast<uint32_t>(interrupt), 22);
                         break;
                     default:
                         break;
