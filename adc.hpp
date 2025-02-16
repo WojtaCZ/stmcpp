@@ -116,20 +116,20 @@ namespace stmcpp::adc {
             samplingTime samplingTime_;
             
         public:
-            constexpr channel(uint8_t number, samplingTime samplingTime) : samplingTime_{samplingTime} {
+            constexpr channel(uint8_t number, samplingTime samplingTime) : number_{number}, samplingTime_{samplingTime} {
                 /*if (number > 19) {
                     errorHandler.hardThrow(error::channel_out_of_range);
                     return;
                 }*/
 
-                number_ = number;
+                //number_ = number;
             }
 
-            uint8_t getNumber() {
+            constexpr uint8_t getNumber() const {
                 return number_;
             }
 
-            samplingTime getSamplingTime(){
+            constexpr samplingTime getSamplingTime() const {
                 return samplingTime_;
             }
     };
@@ -254,8 +254,10 @@ namespace stmcpp::adc {
                 return static_cast<bool>(reg::read(std::ref(adcHandle_->CR), ADC_CR_JADSTART)); 
             }
 
-            void setupRegularSequence(std::vector<channel> & sequence, std::uint8_t triggerEvent = 0, hardwareTrigEdge edge = hardwareTrigEdge::none){
-                if (sequence.size() > 16) {
+            template<size_t N>
+            void setupRegularSequence(const std::array<channel, N> & sequence, std::uint8_t triggerEvent = 0, hardwareTrigEdge edge = hardwareTrigEdge::none) const{
+                if (N > 16) {
+                    static_assert(N <= 16, "The number of channels in the sequence must be less than or equal to 16");
                     errorHandler.hardThrow(error::sequence_out_of_range);
                     return;
                 }
