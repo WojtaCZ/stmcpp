@@ -49,9 +49,8 @@ namespace stmcpp::bdma{
     };
 
     enum class mode : std::uint8_t {
-        periph2mem = 0b00,
-        mem2periph = 0b01,
-        mem2mem = 0b10,
+        periph2mem = 0b0,
+        mem2mem = 0b1,
     };
 
     enum class dataSize : std::uint8_t {
@@ -81,8 +80,8 @@ namespace stmcpp::bdma{
     template<peripheral Peripheral, channel Channel>
     class bdma {
         private:
-            BDMA_Channel_TypeDef * const channelHandle_ = reinterpret_cast<DMA_Stream_TypeDef *>(static_cast<std::uint32_t>(Peripheral) + static_cast<std::uint32_t>(Channel));
-            BDMA_TypeDef * const bdmaHandle_ = reinterpret_cast<DMA_TypeDef *>(static_cast<std::uint32_t>(Peripheral));
+            BDMA_Channel_TypeDef * const channelHandle_ = reinterpret_cast<BDMA_Channel_TypeDef *>(static_cast<std::uint32_t>(Peripheral) + static_cast<std::uint32_t>(Channel));
+            BDMA_TypeDef * const bdmaHandle_ = reinterpret_cast<BDMA_TypeDef *>(static_cast<std::uint32_t>(Peripheral));
         public:
             bdma(mode mode, dataSize psize, bool pincrement, std::uint32_t paddress, dataSize msize, bool mincrement, uint32_t m0address, uint32_t m1address, uint16_t numofdata,
                  priority priority = priority::low, bool circular = false, pincOffset pincoffset = pincOffset::psize, bool doublebuffer = false
@@ -96,7 +95,7 @@ namespace stmcpp::bdma{
                     ((static_cast<uint8_t>(psize) & 0b11) << BDMA_CCR_PSIZE_Pos) | 
                     ((static_cast<uint8_t>(msize) & 0b11) << BDMA_CCR_MSIZE_Pos) | 
                     ((static_cast<uint8_t>(priority) & 0b11) << BDMA_CCR_PL_Pos) | 
-                    ((static_cast<uint8_t>(mode) & 0b10) << BDMA_CCR_MEM2MEM_Pos - 1) | 
+                    ((static_cast<uint8_t>(mode) & 0b1) << BDMA_CCR_MEM2MEM_Pos) | 
                     ((static_cast<uint8_t>(doublebuffer) & 0b1) << BDMA_CCR_DBM_Pos) 
                     //Current target is not set here
                 );
@@ -118,6 +117,11 @@ namespace stmcpp::bdma{
             void setTargetMemory(targetMem memory) const {
                 reg::change(std::ref(channelHandle_->CCR), 0x01, static_cast<std::uint8_t>(memory), BDMA_CCR_CT_Pos);
             }
+
+            void setNumberOfData(uint16_t numofdata) const {
+                reg::write(std::ref(channelHandle_->CNDTR), numofdata);
+            }
+
 
             void enableInterrupt(std::vector<interrupt> interrupts) const {
 
@@ -200,21 +204,21 @@ namespace stmcpp::bdma{
             void clearInterruptFlag(interrupt interrupt) const {
                 switch (Channel) {
                     case channel::channel0:
-                        reg::set(std::ref(bdmaHandle_->IFCR), interrupt, 0);
+                        reg::set(std::ref(bdmaHandle_->IFCR), static_cast<uint32_t>(interrupt), 0);
                     case channel::channel1:
-                        reg::set(std::ref(bdmaHandle_->IFCR), interrupt, 4);
+                        reg::set(std::ref(bdmaHandle_->IFCR), static_cast<uint32_t>(interrupt), 4);
                     case channel::channel2:
-                        reg::set(std::ref(bdmaHandle_->IFCR), interrupt, 8);
+                        reg::set(std::ref(bdmaHandle_->IFCR), static_cast<uint32_t>(interrupt), 8);
                     case channel::channel3:
-                        reg::set(std::ref(bdmaHandle_->IFCR), interrupt, 12);
+                        reg::set(std::ref(bdmaHandle_->IFCR), static_cast<uint32_t>(interrupt), 12);
                     case channel::channel4:
-                        reg::set(std::ref(bdmaHandle_->IFCR), interrupt, 16);
+                        reg::set(std::ref(bdmaHandle_->IFCR), static_cast<uint32_t>(interrupt), 16);
                     case channel::channel5:
-                        reg::set(std::ref(bdmaHandle_->IFCR), interrupt, 20);
+                        reg::set(std::ref(bdmaHandle_->IFCR), static_cast<uint32_t>(interrupt), 20);
                     case channel::channel6:
-                        reg::set(std::ref(bdmaHandle_->IFCR), interrupt, 24);
+                        reg::set(std::ref(bdmaHandle_->IFCR), static_cast<uint32_t>(interrupt), 24);
                     case channel::channel7:
-                        reg::set(std::ref(bdmaHandle_->IFCR), interrupt, 28);
+                        reg::set(std::ref(bdmaHandle_->IFCR), static_cast<uint32_t>(interrupt), 28);
                     default:
                         break;
                 }
@@ -223,21 +227,21 @@ namespace stmcpp::bdma{
             bool getInterruptFlag(interrupt interrupt) const {
                 switch (Channel) {
                     case channel::channel0:
-                        return static_cast<bool>(reg::read(std::ref(bdmaHandle_->ISR), interrupt, 0));
+                        return static_cast<bool>(reg::read(std::ref(bdmaHandle_->ISR), static_cast<uint32_t>(interrupt), 0));
                     case channel::channel1:
-                        return static_cast<bool>(reg::read(std::ref(bdmaHandle_->ISR), interrupt, 4));
+                        return static_cast<bool>(reg::read(std::ref(bdmaHandle_->ISR), static_cast<uint32_t>(interrupt), 4));
                     case channel::channel2:
-                        return static_cast<bool>(reg::read(std::ref(bdmaHandle_->ISR), interrupt, 8));
+                        return static_cast<bool>(reg::read(std::ref(bdmaHandle_->ISR), static_cast<uint32_t>(interrupt), 8));
                     case channel::channel3:
-                        return static_cast<bool>(reg::read(std::ref(bdmaHandle_->ISR), interrupt, 12));
+                        return static_cast<bool>(reg::read(std::ref(bdmaHandle_->ISR), static_cast<uint32_t>(interrupt), 12));
                     case channel::channel4:
-                        return static_cast<bool>(reg::read(std::ref(bdmaHandle_->ISR), interrupt, 16));
+                        return static_cast<bool>(reg::read(std::ref(bdmaHandle_->ISR), static_cast<uint32_t>(interrupt), 16));
                     case channel::channel5:
-                        return static_cast<bool>(reg::read(std::ref(bdmaHandle_->ISR), interrupt, 20));
+                        return static_cast<bool>(reg::read(std::ref(bdmaHandle_->ISR), static_cast<uint32_t>(interrupt), 20));
                     case channel::channel6:
-                        return static_cast<bool>(reg::read(std::ref(bdmaHandle_->ISR), interrupt, 24));
+                        return static_cast<bool>(reg::read(std::ref(bdmaHandle_->ISR), static_cast<uint32_t>(interrupt), 24));
                     case channel::channel7:
-                        return static_cast<bool>(reg::read(std::ref(bdmaHandle_->ISR), interrupt, 28));
+                        return static_cast<bool>(reg::read(std::ref(bdmaHandle_->ISR), static_cast<uint32_t>(interrupt), 28));
                     default:
                         break;
                 }
