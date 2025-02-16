@@ -27,7 +27,7 @@ namespace stmcpp::bdma{
     using namespace stmcpp;
 
     enum class peripheral : std::uint32_t {
-        dma1 = BDMA_BASE
+        bdma = BDMA_BASE
     };
 
     enum class channel : std::uint32_t {

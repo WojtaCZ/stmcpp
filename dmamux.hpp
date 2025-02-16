@@ -422,8 +422,8 @@ namespace stmcpp::dmamux2 {
     template<channel Channel>
     class dmamux {
         private:
-            DMAMUX_Channel_TypeDef * const channelHandle_ = reinterpret_cast<DMAMUX_Channel_TypeDef *>(static_cast<uint32_t>(DMAMUX1_BASE) + static_cast<std::uint32_t>(Channel));
-            DMAMUX_ChannelStatus_TypeDef * const channelStatusHandle_ = reinterpret_cast<DMAMUX_ChannelStatus_TypeDef *>(static_cast<std::uint32_t>(DMAMUX1_ChannelStatus_BASE));
+            DMAMUX_Channel_TypeDef * const channelHandle_ = reinterpret_cast<DMAMUX_Channel_TypeDef *>(static_cast<uint32_t>(DMAMUX2_BASE) + static_cast<std::uint32_t>(Channel));
+            DMAMUX_ChannelStatus_TypeDef * const channelStatusHandle_ = reinterpret_cast<DMAMUX_ChannelStatus_TypeDef *>(static_cast<std::uint32_t>(DMAMUX2_ChannelStatus_BASE));
 
             constexpr auto getChannelIdx_() const {
                 return static_cast<std::uint32_t>(Channel)/4;
