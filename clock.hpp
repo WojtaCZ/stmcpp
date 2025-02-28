@@ -409,7 +409,6 @@ namespace stmcpp::clock {
             ++ticks_;
         } 
     }   
-   
 }
 
 #endif
