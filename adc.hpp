@@ -140,7 +140,7 @@ namespace stmcpp::adc {
             ADC_TypeDef * const adcHandle_ = reinterpret_cast<ADC_TypeDef *>(static_cast<std::uint32_t>(Peripheral));
 
         public:
-            adc(resolution resolution, dataManegment dataManegment = dataManegment::storeInDR, bool regularOversampled = false, bool injectedOversampled = false, uint16_t oversampling = 0, uint8_t leftShift = 0, uint8_t rightShift = 0, bool boost = false, bool continuous = false, bool overrun = false) {
+            adc(resolution resolution, dataManegment dataManegment = dataManegment::storeInDR, bool regularOversampled = false, bool injectedOversampled = false, uint16_t oversampling = 1, uint8_t leftShift = 0, uint8_t rightShift = 0, bool boost = false, bool continuous = false, bool overrun = false) {
                 // Make sure to disable deep powerdown
                 reg::clear(std::ref(adcHandle_->CR), ADC_CR_DEEPPWD);
                 // Enable the ADC voltage regulator
@@ -160,8 +160,8 @@ namespace stmcpp::adc {
 
                 reg::write(std::ref(adcHandle_->CFGR2),
                     ((static_cast<uint8_t>(leftShift) & 0b1111) << ADC_CFGR2_LSHIFT_Pos) | 
-                    ((static_cast<uint16_t>(oversampling) & 0x3FF) << ADC_CFGR2_OVSR_Pos) |
-                    ((static_cast<uint8_t>(rightShift) & 0b111) << ADC_CFGR2_OVSS_Pos) |
+                    ((static_cast<uint16_t>(oversampling-1) & 0x3FF) << ADC_CFGR2_OVSR_Pos) |
+                    ((static_cast<uint8_t>(rightShift) & 0b1111) << ADC_CFGR2_OVSS_Pos) |
                     ((static_cast<uint8_t>(regularOversampled) & 0b1) << ADC_CFGR2_ROVSE_Pos) |
                     ((static_cast<uint8_t>(injectedOversampled) & 0b1) << ADC_CFGR2_JOVSE_Pos) 
                 );
