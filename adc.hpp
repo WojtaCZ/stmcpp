@@ -155,7 +155,7 @@ namespace stmcpp::adc {
                     ((static_cast<uint8_t>(continuous) & 0b1) << ADC_CFGR_CONT_Pos) | 
                     ((static_cast<uint8_t>(overrun) & 0b1) << ADC_CFGR_OVRMOD_Pos) |
                     ((static_cast<uint8_t>(resolution) & 0b111) << ADC_CFGR_RES_Pos) |
-                    ((static_cast<uint8_t>(dataManegment) & 0b1) << ADC_CFGR_DMNGT_Pos)
+                    ((static_cast<uint8_t>(dataManegment) & 0b11) << ADC_CFGR_DMNGT_Pos)
                 );
 
                 reg::write(std::ref(adcHandle_->CFGR2),
