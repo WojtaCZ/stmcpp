@@ -32,7 +32,6 @@ namespace stmcpp::dac {
     using namespace stmcpp::units;
 
     enum class error {
-        
         timeout
     };
 

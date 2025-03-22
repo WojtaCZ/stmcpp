@@ -328,6 +328,7 @@ namespace stmcpp::i2c {
 
                 return val_;
             }
+            
 
     };
 }
