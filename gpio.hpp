@@ -155,6 +155,11 @@ namespace stmcpp::gpio{
                 return static_cast<bool>(reg::read(std::ref(gpioHandle_->IDR), 0x00000001 << Pin));
             }
 
+            bool getIntendedState() const {
+                // Returns the intended state of the pin
+                return static_cast<bool>(reg::read(std::ref(gpioHandle_->ODR), 0x00000001 << Pin));
+            }
+
             void setMode(gpio::mode mode) const {
                 reg::change(std::ref(gpioHandle_->MODER), 0x03, static_cast<std::uint8_t>(mode), Pin * 2);
 
